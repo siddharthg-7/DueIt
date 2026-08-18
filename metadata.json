@@ -1,0 +1,6 @@
+{
+  "name": "DueIt",
+  "description": "Mobile-first financial collection assistant for small business owners to track money owed, know what to collect today, and never miss a payment.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
