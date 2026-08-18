@@ -42,7 +42,8 @@ class SearchField extends StatelessWidget {
           ),
           suffixIcon: controller.text.isNotEmpty
               ? IconButton(
-                  icon: const Icon(Icons.close, size: 18, color: AppColors.onSurfaceVariant),
+                  icon: const Icon(Icons.close,
+                      size: 18, color: AppColors.onSurfaceVariant),
                   onPressed: () {
                     controller.clear();
                     if (onClear != null) onClear!();
@@ -50,7 +51,8 @@ class SearchField extends StatelessWidget {
                   },
                 )
               : null,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           border: InputBorder.none,
           enabledBorder: InputBorder.none,
           focusedBorder: InputBorder.none,

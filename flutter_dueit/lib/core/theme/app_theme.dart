@@ -85,7 +85,8 @@ abstract class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.surfaceContainerLowest,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: AppColors.outlineVariant),
@@ -105,7 +106,8 @@ abstract class AppTheme {
         hintStyle: AppTypography.bodyMedium.copyWith(
           color: AppColors.onSurfaceVariant.withValues(alpha: 0.6),
         ),
-        labelStyle: AppTypography.labelLarge.copyWith(color: AppColors.onSurface),
+        labelStyle:
+            AppTypography.labelLarge.copyWith(color: AppColors.onSurface),
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: AppColors.surfaceContainer.withValues(alpha: 0.95),

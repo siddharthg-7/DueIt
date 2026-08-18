@@ -53,7 +53,8 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
             alignment: Alignment.center,
             children: [
               IconButton(
-                icon: const Icon(Icons.notifications_none_rounded, color: AppColors.primary),
+                icon: const Icon(Icons.notifications_none_rounded,
+                    color: AppColors.primary),
                 onPressed: onNotifications,
               ),
               if (unreadNotificationsCount > 0)

@@ -13,11 +13,13 @@ class LoginScreen extends ConsumerStatefulWidget {
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProviderStateMixin {
+class _LoginScreenState extends ConsumerState<LoginScreen>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
-  
+
   // Controllers
-  final _emailController = TextEditingController(text: 'alex@karateacademy.com');
+  final _emailController =
+      TextEditingController(text: 'alex@karateacademy.com');
   final _passwordController = TextEditingController(text: 'password123');
   final _businessNameController = TextEditingController();
   final _ownerNameController = TextEditingController();
@@ -53,16 +55,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
       bool success = false;
       if (_isSignIn) {
         success = await ref.read(authControllerProvider.notifier).signIn(
-          _emailController.text.trim(),
-          _passwordController.text,
-        );
+              _emailController.text.trim(),
+              _passwordController.text,
+            );
       } else {
         success = await ref.read(authControllerProvider.notifier).signUp(
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-          businessName: _businessNameController.text.trim(),
-          ownerName: _ownerNameController.text.trim(),
-        );
+              email: _emailController.text.trim(),
+              password: _passwordController.text,
+              businessName: _businessNameController.text.trim(),
+              ownerName: _ownerNameController.text.trim(),
+            );
       }
 
       if (success && mounted) {
@@ -91,7 +93,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                   child: Column(
                     children: [
                       const SizedBox(height: 40),
-                      
+
                       // App Branding Header
                       Hero(
                         tag: 'app_logo_hero',
@@ -100,7 +102,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                           height: 80,
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
-                              colors: [AppColors.primary, AppColors.primaryContainer],
+                              colors: [
+                                AppColors.primary,
+                                AppColors.primaryContainer
+                              ],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
@@ -170,7 +175,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                           labelStyle: AppTypography.titleSmall.copyWith(
                             fontWeight: FontWeight.w700,
                           ),
-                          unselectedLabelStyle: AppTypography.titleSmall.copyWith(
+                          unselectedLabelStyle:
+                              AppTypography.titleSmall.copyWith(
                             fontWeight: FontWeight.w600,
                           ),
                           dividerColor: Colors.transparent,
@@ -191,20 +197,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                           children: [
                             if (authState.error != null) ...[
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 12),
                                 decoration: BoxDecoration(
-                                  color: AppColors.errorContainer.withValues(alpha: 0.2),
+                                  color: AppColors.errorContainer
+                                      .withValues(alpha: 0.2),
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: AppColors.errorContainer),
+                                  border: Border.all(
+                                      color: AppColors.errorContainer),
                                 ),
                                 child: Row(
                                   children: [
-                                    const Icon(Icons.error_outline, color: AppColors.error, size: 20),
+                                    const Icon(Icons.error_outline,
+                                        color: AppColors.error, size: 20),
                                     const SizedBox(width: 10),
                                     Expanded(
                                       child: Text(
                                         authState.error!,
-                                        style: AppTypography.bodyMedium.copyWith(color: AppColors.error),
+                                        style: AppTypography.bodyMedium
+                                            .copyWith(color: AppColors.error),
                                       ),
                                     ),
                                   ],
@@ -224,13 +235,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                                       controller: _businessNameController,
                                       decoration: InputDecoration(
                                         labelText: 'Business Name',
-                                        hintText: 'e.g. Apex Martial Arts Academy',
+                                        hintText:
+                                            'e.g. Apex Martial Arts Academy',
                                         prefixIcon: const Icon(Icons.business),
                                         border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(16),
+                                          borderRadius:
+                                              BorderRadius.circular(16),
                                         ),
                                       ),
-                                      validator: (val) => val == null || val.trim().isEmpty
+                                      validator: (val) => val == null ||
+                                              val.trim().isEmpty
                                           ? 'Please enter your business name'
                                           : null,
                                     ),
@@ -240,14 +254,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                                       decoration: InputDecoration(
                                         labelText: 'Owner / Contact Name',
                                         hintText: 'e.g. Sensei Alex Rivera',
-                                        prefixIcon: const Icon(Icons.person_outline),
+                                        prefixIcon:
+                                            const Icon(Icons.person_outline),
                                         border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(16),
+                                          borderRadius:
+                                              BorderRadius.circular(16),
                                         ),
                                       ),
-                                      validator: (val) => val == null || val.trim().isEmpty
-                                          ? 'Please enter your name'
-                                          : null,
+                                      validator: (val) =>
+                                          val == null || val.trim().isEmpty
+                                              ? 'Please enter your name'
+                                              : null,
                                     ),
                                     const SizedBox(height: 18),
                                   ],
@@ -271,7 +288,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                                 if (val == null || val.trim().isEmpty) {
                                   return 'Please enter your email';
                                 }
-                                if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(val.trim())) {
+                                if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                                    .hasMatch(val.trim())) {
                                   return 'Please enter a valid email address';
                                 }
                                 return null;
@@ -291,9 +309,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                                 ),
                                 suffixIcon: IconButton(
                                   icon: Icon(
-                                    _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                    _obscurePassword
+                                        ? Icons.visibility_off_outlined
+                                        : Icons.visibility_outlined,
                                   ),
-                                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                                  onPressed: () => setState(() =>
+                                      _obscurePassword = !_obscurePassword),
                                 ),
                               ),
                               validator: (val) => val == null || val.length < 6
@@ -303,7 +324,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                           ],
                         ),
                       ),
-                      
+
                       const Spacer(),
                       const SizedBox(height: 32),
 
@@ -325,7 +346,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                                   width: 24,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2.5,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white),
                                   ),
                                 )
                               : Text(

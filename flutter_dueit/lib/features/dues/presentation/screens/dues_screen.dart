@@ -44,12 +44,22 @@ class _DuesScreenState extends ConsumerState<DuesScreen> {
           d.customerName.toLowerCase().contains(q) ||
           d.description.toLowerCase().contains(q);
 
-      if (!matchesQuery) return false;
+      if (!matchesQuery) {
+        return false;
+      }
 
-      if (duesState.duesFilter == 'Today') return d.dueDate == todayStr;
-      if (duesState.duesFilter == 'Overdue') return d.status == DueStatus.overdue;
-      if (duesState.duesFilter == 'Upcoming') return d.dueDate.compareTo(todayStr) > 0 && !d.isFullyPaid;
-      if (duesState.duesFilter == 'Paid') return d.status == DueStatus.paid;
+      if (duesState.duesFilter == 'Today') {
+        return d.dueDate == todayStr;
+      }
+      if (duesState.duesFilter == 'Overdue') {
+        return d.status == DueStatus.overdue;
+      }
+      if (duesState.duesFilter == 'Upcoming') {
+        return d.dueDate.compareTo(todayStr) > 0 && !d.isFullyPaid;
+      }
+      if (duesState.duesFilter == 'Paid') {
+        return d.status == DueStatus.paid;
+      }
       return true;
     }).toList();
 
@@ -61,7 +71,7 @@ class _DuesScreenState extends ConsumerState<DuesScreen> {
 
     return Scaffold(
       appBar: AppTopBar(
-        title: 'Payment History',
+        title: 'Dues',
         onProfile: () => context.push(RouteNames.settings),
         onNotifications: () => context.push(RouteNames.notifications),
         unreadNotificationsCount: unreadCount,
@@ -96,11 +106,16 @@ class _DuesScreenState extends ConsumerState<DuesScreen> {
                       selected: isSelected,
                       selectedColor: AppColors.primary,
                       labelStyle: AppTypography.labelSmall.copyWith(
-                        color: isSelected ? AppColors.onPrimary : AppColors.onSurface,
-                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                        color: isSelected
+                            ? AppColors.onPrimary
+                            : AppColors.onSurface,
+                        fontWeight:
+                            isSelected ? FontWeight.w700 : FontWeight.w500,
                       ),
                       onSelected: (_) {
-                        ref.read(duesControllerProvider.notifier).setFilter(tab);
+                        ref
+                            .read(duesControllerProvider.notifier)
+                            .setFilter(tab);
                       },
                     ),
                   );
@@ -135,7 +150,8 @@ class _DuesScreenState extends ConsumerState<DuesScreen> {
               EmptyState(
                 icon: Icons.receipt_long,
                 title: 'No dues found',
-                description: 'No payment dues match the current filter "${duesState.duesFilter}".',
+                description:
+                    'No payment dues match the current filter "${duesState.duesFilter}".',
                 actionText: '+ Create Due',
                 onAction: () => context.push(RouteNames.addDue),
               )

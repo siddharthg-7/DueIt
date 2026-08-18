@@ -29,7 +29,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _ownerNameCtrl = TextEditingController(text: user?.ownerName ?? '');
     _phoneCtrl = TextEditingController(text: user?.phone ?? '');
     _upiIdCtrl = TextEditingController(text: user?.upiId ?? '');
-    if (user != null && AppConstants.businessTypes.contains(user.businessType)) {
+    if (user != null &&
+        AppConstants.businessTypes.contains(user.businessType)) {
       _selectedBusinessType = user.businessType;
     }
   }
@@ -75,7 +76,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                   alignment: Alignment.center,
                   child: Text(
-                    (user?.businessName.isNotEmpty == true) ? user!.businessName[0] : 'D',
+                    (user?.businessName.isNotEmpty == true)
+                        ? user!.businessName[0]
+                        : 'D',
                     style: const TextStyle(
                       color: AppColors.onPrimaryContainer,
                       fontSize: 22,
@@ -90,7 +93,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     children: [
                       Text(
                         user?.businessName ?? 'Business Name',
-                        style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.w700),
+                        style: AppTypography.titleMedium
+                            .copyWith(fontWeight: FontWeight.w700),
                       ),
                       Text(
                         '${user?.email ?? ''} • ${user?.businessType ?? ''}',
@@ -115,46 +119,52 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Business Profile Details', style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.w600)),
+                Text('Business Profile Details',
+                    style: AppTypography.titleMedium
+                        .copyWith(fontWeight: FontWeight.w600)),
                 const SizedBox(height: 16),
-
-                Text('Business / Academy Name *', style: AppTypography.labelSmall),
+                Text('Business / Academy Name *',
+                    style: AppTypography.labelSmall),
                 const SizedBox(height: 6),
                 TextField(controller: _businessNameCtrl),
                 const SizedBox(height: 14),
-
-                Text('Owner / Instructor Name *', style: AppTypography.labelSmall),
+                Text('Owner / Instructor Name *',
+                    style: AppTypography.labelSmall),
                 const SizedBox(height: 6),
                 TextField(controller: _ownerNameCtrl),
                 const SizedBox(height: 14),
-
                 Text('Business Type', style: AppTypography.labelSmall),
                 const SizedBox(height: 6),
                 DropdownButtonFormField<String>(
                   initialValue: _selectedBusinessType,
-                  decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 8)),
+                  decoration: const InputDecoration(
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 14, vertical: 8)),
                   items: AppConstants.businessTypes.map((type) {
                     return DropdownMenuItem(value: type, child: Text(type));
                   }).toList(),
                   onChanged: (val) {
-                    if (val != null) setState(() => _selectedBusinessType = val);
+                    if (val != null) {
+                      setState(() => _selectedBusinessType = val);
+                    }
                   },
                 ),
                 const SizedBox(height: 14),
-
-                Text('Phone Number (for contact & SMS)', style: AppTypography.labelSmall),
+                Text('Phone Number (for contact & SMS)',
+                    style: AppTypography.labelSmall),
                 const SizedBox(height: 6),
-                TextField(controller: _phoneCtrl, keyboardType: TextInputType.phone),
+                TextField(
+                    controller: _phoneCtrl, keyboardType: TextInputType.phone),
                 const SizedBox(height: 14),
-
-                Text('UPI ID / VPA (Included in WhatsApp links)', style: AppTypography.labelSmall),
+                Text('UPI ID / VPA (Included in WhatsApp links)',
+                    style: AppTypography.labelSmall),
                 const SizedBox(height: 6),
                 TextField(
                   controller: _upiIdCtrl,
-                  decoration: const InputDecoration(hintText: 'e.g. name@okhdfcbank'),
+                  decoration:
+                      const InputDecoration(hintText: 'e.g. name@okhdfcbank'),
                 ),
                 const SizedBox(height: 20),
-
                 SizedBox(
                   width: double.infinity,
                   height: 50,
@@ -168,10 +178,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           phone: _phoneCtrl.text.trim(),
                           upiId: _upiIdCtrl.text.trim(),
                         );
-                        await ref.read(authControllerProvider.notifier).updateProfile(updated);
+                        await ref
+                            .read(authControllerProvider.notifier)
+                            .updateProfile(updated);
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Settings saved successfully!')),
+                            const SnackBar(
+                                content: Text('Settings saved successfully!')),
                           );
                         }
                       }
@@ -199,8 +212,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     await ref.read(authControllerProvider.notifier).signOut();
                     if (context.mounted) context.go('/splash');
                   },
-                  icon: const Icon(Icons.logout, size: 18, color: AppColors.error),
-                  label: const Text('Sign Out', style: TextStyle(color: AppColors.error)),
+                  icon: const Icon(Icons.logout,
+                      size: 18, color: AppColors.error),
+                  label: const Text('Sign Out',
+                      style: TextStyle(color: AppColors.error)),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: AppColors.errorContainer),
                   ),

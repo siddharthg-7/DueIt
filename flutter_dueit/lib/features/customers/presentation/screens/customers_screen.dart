@@ -112,7 +112,9 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
                     selected: isSelected,
                     selectedColor: AppColors.primary,
                     labelStyle: TextStyle(
-                      color: isSelected ? AppColors.onPrimary : AppColors.onSurface,
+                      color: isSelected
+                          ? AppColors.onPrimary
+                          : AppColors.onSurface,
                       fontSize: 11,
                     ),
                     onSelected: (selected) {
@@ -137,13 +139,17 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
                 height: 52,
                 child: FilledButton(
                   onPressed: () async {
-                    if (nameCtrl.text.trim().isEmpty || phoneCtrl.text.trim().isEmpty) {
+                    if (nameCtrl.text.trim().isEmpty ||
+                        phoneCtrl.text.trim().isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Name and phone are required.')),
+                        const SnackBar(
+                            content: Text('Name and phone are required.')),
                       );
                       return;
                     }
-                    await ref.read(customerControllerProvider.notifier).addCustomer(
+                    await ref
+                        .read(customerControllerProvider.notifier)
+                        .addCustomer(
                           name: nameCtrl.text,
                           phone: phoneCtrl.text,
                           email: emailCtrl.text,
@@ -168,11 +174,16 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
     final unreadCount = ref.watch(reminderControllerProvider).unreadCount;
 
     final customerListWithStats = customerState.customers.map((c) {
-      final clientDues = duesState.dues.where((d) => d.customerId == c.id).toList();
-      final pendingDues = clientDues.where(
-        (d) => d.status != DueStatus.paid && d.status != DueStatus.cancelled,
-      ).toList();
-      final totalBalance = pendingDues.fold<double>(0, (sum, d) => sum + d.remainingAmount);
+      final clientDues =
+          duesState.dues.where((d) => d.customerId == c.id).toList();
+      final pendingDues = clientDues
+          .where(
+            (d) =>
+                d.status != DueStatus.paid && d.status != DueStatus.cancelled,
+          )
+          .toList();
+      final totalBalance =
+          pendingDues.fold<double>(0, (sum, d) => sum + d.remainingAmount);
       final isOverdue = pendingDues.any((d) => d.status == DueStatus.overdue);
 
       return {
@@ -204,9 +215,11 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
 
     // Sort
     if (_sortBy == 'balance') {
-      filtered.sort((a, b) => (b['balance'] as double).compareTo(a['balance'] as double));
+      filtered.sort(
+          (a, b) => (b['balance'] as double).compareTo(a['balance'] as double));
     } else {
-      filtered.sort((a, b) => ((a['customer'] as dynamic).name as String).compareTo((b['customer'] as dynamic).name));
+      filtered.sort((a, b) => ((a['customer'] as dynamic).name as String)
+          .compareTo((b['customer'] as dynamic).name));
     }
 
     final tabs = ['All', 'With Balance', 'Overdue'];
@@ -253,10 +266,13 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
                           color: isSelected
                               ? AppColors.onSecondaryContainer
                               : AppColors.onSurfaceVariant,
-                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                          fontWeight:
+                              isSelected ? FontWeight.w700 : FontWeight.w500,
                         ),
                         onSelected: (_) {
-                          ref.read(customerControllerProvider.notifier).setFilterTab(tab);
+                          ref
+                              .read(customerControllerProvider.notifier)
+                              .setFilterTab(tab);
                         },
                       ),
                     );
@@ -265,7 +281,8 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
                 DropdownButton<String>(
                   value: _sortBy,
                   underline: const SizedBox(),
-                  icon: const Icon(Icons.sort, size: 18, color: AppColors.primary),
+                  icon: const Icon(Icons.sort,
+                      size: 18, color: AppColors.primary),
                   style: AppTypography.labelSmall.copyWith(
                     color: AppColors.primary,
                     fontWeight: FontWeight.w600,

@@ -51,7 +51,8 @@ class CollectionSummary extends StatelessWidget {
                 ),
                 const SizedBox(width: 12),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: AppColors.primaryContainer.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
@@ -74,7 +75,8 @@ class CollectionSummary extends StatelessWidget {
               label: 'Expected Total',
               amount: expectedTotal,
             ),
-            const Divider(height: 16, thickness: 0.6, color: AppColors.surfaceVariant),
+            const Divider(
+                height: 16, thickness: 0.6, color: AppColors.surfaceVariant),
 
             // Collected Total
             _buildStatRow(
@@ -83,7 +85,8 @@ class CollectionSummary extends StatelessWidget {
               amount: collectedTotal,
               isHighlighted: true,
             ),
-            const Divider(height: 16, thickness: 0.6, color: AppColors.surfaceVariant),
+            const Divider(
+                height: 16, thickness: 0.6, color: AppColors.surfaceVariant),
 
             // Pending & Overdue
             _buildStatRow(
@@ -101,7 +104,8 @@ class CollectionSummary extends StatelessWidget {
                 child: LinearProgressIndicator(
                   value: rate / 100,
                   backgroundColor: AppColors.surfaceVariant,
-                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                  valueColor:
+                      const AlwaysStoppedAnimation<Color>(AppColors.primary),
                 ),
               ),
             ),

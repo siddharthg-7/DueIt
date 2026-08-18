@@ -79,7 +79,8 @@ class CustomerController extends StateNotifier<CustomerState> {
       email: email?.trim(),
       notes: notes?.trim(),
       clientSince: 'Aug 2026',
-      createdAt: '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}',
+      createdAt:
+          '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}',
     );
 
     final created = await _repository.createCustomer(newCustomer);

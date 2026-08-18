@@ -39,7 +39,9 @@ class DashboardScreen extends ConsumerWidget {
       body: RefreshIndicator(
         onRefresh: () async {
           await ref.read(duesControllerProvider.notifier).loadDues();
-          await ref.read(reminderControllerProvider.notifier).loadNotifications();
+          await ref
+              .read(reminderControllerProvider.notifier)
+              .loadNotifications();
         },
         color: AppColors.primary,
         child: ListView(
@@ -65,7 +67,8 @@ class DashboardScreen extends ConsumerWidget {
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(24),
-                side: const BorderSide(color: AppColors.surfaceVariant, width: 1),
+                side:
+                    const BorderSide(color: AppColors.surfaceVariant, width: 1),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(20),
@@ -74,7 +77,8 @@ class DashboardScreen extends ConsumerWidget {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.today, size: 20, color: AppColors.primary),
+                        const Icon(Icons.today,
+                            size: 20, color: AppColors.primary),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -112,11 +116,14 @@ class DashboardScreen extends ConsumerWidget {
                       height: 52,
                       child: FilledButton.icon(
                         onPressed: () {
-                          ref.read(duesControllerProvider.notifier).setFilter('Today');
+                          ref
+                              .read(duesControllerProvider.notifier)
+                              .setFilter('Today');
                           context.go(RouteNames.dues);
                         },
                         icon: const Icon(Icons.arrow_forward, size: 18),
-                        label: Text('View Today\'s Dues (${metrics.todayDues.length})'),
+                        label: Text(
+                            'View Today\'s Dues (${metrics.todayDues.length})'),
                         style: FilledButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           shape: RoundedRectangleBorder(
@@ -138,7 +145,9 @@ class DashboardScreen extends ConsumerWidget {
                 Expanded(
                   child: InkWell(
                     onTap: () {
-                      ref.read(duesControllerProvider.notifier).setFilter('Overdue');
+                      ref
+                          .read(duesControllerProvider.notifier)
+                          .setFilter('Overdue');
                       context.go(RouteNames.dues);
                     },
                     borderRadius: BorderRadius.circular(22),
@@ -154,7 +163,8 @@ class DashboardScreen extends ConsumerWidget {
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.warning_rounded, size: 16, color: AppColors.error),
+                              const Icon(Icons.warning_rounded,
+                                  size: 16, color: AppColors.error),
                               const SizedBox(width: 6),
                               Expanded(
                                 child: Text(
@@ -199,7 +209,9 @@ class DashboardScreen extends ConsumerWidget {
                 Expanded(
                   child: InkWell(
                     onTap: () {
-                      ref.read(duesControllerProvider.notifier).setFilter('Upcoming');
+                      ref
+                          .read(duesControllerProvider.notifier)
+                          .setFilter('Upcoming');
                       context.go(RouteNames.dues);
                     },
                     borderRadius: BorderRadius.circular(22),
@@ -215,7 +227,8 @@ class DashboardScreen extends ConsumerWidget {
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.calendar_month, size: 16, color: AppColors.primary),
+                              const Icon(Icons.calendar_month,
+                                  size: 16, color: AppColors.primary),
                               const SizedBox(width: 6),
                               Expanded(
                                 child: Text(
@@ -274,7 +287,8 @@ class DashboardScreen extends ConsumerWidget {
               EmptyState(
                 icon: Icons.task_alt,
                 title: 'All caught up for today!',
-                description: 'No pending collections due today. You can create a new payment due anytime.',
+                description:
+                    'No pending collections due today. You can create a new payment due anytime.',
                 actionText: '+ Create Due',
                 onAction: () => context.push(RouteNames.addDue),
               )

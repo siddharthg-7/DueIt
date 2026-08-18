@@ -1,314 +1,441 @@
-You are now the lead developer for a mobile application called "DueIt".
+We are now starting STEP 3 of the DueIt production implementation.
 
-IMPORTANT:
-Do NOT modify the project yet.
+The Flutter foundation has already been created and verified.
 
-First perform a complete audit of the project that was exported from Google AI Studio.
+Now focus ONLY on implementing the DueIt visual design system and application navigation.
 
-This project was originally designed in Google Stitch and then prototyped in Google AI Studio.
+DO NOT implement Firebase authentication yet.
+DO NOT implement Firestore yet.
+DO NOT implement notifications yet.
+DO NOT implement customer CRUD yet.
+DO NOT implement payment business logic yet.
+DO NOT implement recurring payment logic yet.
 
-The AI Studio implementation is only a prototype/reference implementation.
+This step is ONLY:
 
-The final production application must be built in Flutter/Dart.
+1. Stitch design system
+2. Flutter theme
+3. Reusable UI components
+4. Application shell
+5. Navigation
+6. Static screen layouts
+7. Responsive mobile behavior
 
 ==================================================
-ABOUT DUEIT
+SOURCE OF TRUTH
 ==================================================
 
-DueIt is a mobile financial collection assistant for small business owners.
+The original Google Stitch designs are the visual source of truth.
 
-Its core purpose is:
+The Google AI Studio TypeScript prototype is NOT the visual source of truth.
 
-"Know what you're owed. Know when to collect. Never miss a payment."
+If the AI Studio implementation differs from Stitch, follow Stitch.
 
-Target users include:
+Do not invent a new design.
 
-- Karate instructors
-- Gym owners
-- Tuition teachers
-- Dance instructors
-- Coaching centers
-- Freelancers
-- Membership businesses
-- Small service businesses
-- Local businesses
+==================================================
+DUEIT DESIGN PRINCIPLES
+==================================================
 
-The primary question DueIt must answer is:
+DueIt should feel:
+
+- Professional
+- Simple
+- Trustworthy
+- Calm
+- Modern
+- Friendly
+- Financial but not like complicated accounting software
+- Easy for a non-technical small business owner
+- Fast and action-oriented
+
+The most important information in the app is:
 
 "How much money do I need to collect today?"
 
-==================================================
-IMPORTANT PRODUCT FLOW
-==================================================
-
-The core workflow is:
-
-Customer
-→ Amount
-→ Reason
-→ Due Date
-→ Reminder
-→ Due
-→ Notification
-→ Payment
-→ Mark Paid
-→ Payment History
-
-The primary action is:
-
-ADD DUE
-
-The core user journey is:
-
-Login
-→ Business Setup
-→ Home
-→ Add Due
-→ Select Person
-→ Enter Amount
-→ Select Due Date
-→ Configure Reminder
-→ Optional Recurrence
-→ Create Due
-→ Home updates
-→ Due appears
-→ Open Due
-→ Mark Paid
-→ Dashboard updates
-→ Payment history updates
+The interface should prioritize clarity over information density.
 
 ==================================================
-MVP FEATURES
+SCREENS TO IMPLEMENT
 ==================================================
 
-The MVP must eventually support:
+Implement the static Flutter UI for the following screens based on the Stitch designs:
 
-1. Authentication
-2. Business profile/setup
-3. Customer/person management
-4. Create a payment due
-5. Amount
-6. Description/reason
-7. Due date
-8. Reminder configuration
-9. Today's collection
-10. Upcoming payments
-11. Overdue payments
-12. Mark payment as paid
-13. Payment history
-14. Customer details
-15. Recurring payments
-16. Basic financial summary
+1. Splash
+2. Welcome / onboarding
+3. Login
+4. Business setup
+5. Home dashboard
+6. Add Due
+7. Due details
+8. People
+9. Person details
+10. All dues
+11. Notifications
+12. Insights
+13. Settings if present in the Stitch design
 
-Future features are NOT part of the current MVP:
+Use realistic static/mock data only for visual rendering.
 
-- UPI integration
-- Payment gateway
-- WhatsApp automation
-- AI financial assistant
-- Advanced accounting
-- GST
-- Invoicing
-- Bank integrations
-- Staff accounts
-- Multi-business management
-- Complex expense management
+Do not implement persistence yet.
 
 ==================================================
-FINAL PRODUCTION STACK
+HOME SCREEN
 ==================================================
 
-The final application must use:
+The Home screen is the most important screen.
 
-Flutter
-Dart
-Riverpod
-GoRouter
-Material 3
-Firebase Authentication
-Cloud Firestore
-Firebase Cloud Messaging
-SQLite/local persistence
-Local notifications
+Its visual hierarchy should communicate:
 
-The goal is to use free/open-source tooling and free service tiers wherever possible.
+Today's Collection
 
-The existing TypeScript project is NOT the final production technology.
+₹8,500
 
-Do not assume that the existing TypeScript architecture should be preserved.
+5 payments
 
-==================================================
-YOUR TASK
-==================================================
+Then:
 
-Inspect the entire exported project.
+Overdue
+₹4,000
 
-Do NOT modify any files yet.
+Then:
 
-Analyze:
+Upcoming
+₹18,500
 
-1. Every screen
-2. Every route
-3. Every component
-4. Every interaction
-5. Every form
-6. Every piece of application state
-7. Every mock-data source
-8. Every feature that has been implemented
-9. Every feature that is only visually represented
-10. Every feature that is missing
-11. Every broken interaction
-12. Every inconsistent state update
-13. Every hardcoded value
-14. Every TypeScript-specific implementation
-15. Every place where the implementation differs from the intended Stitch design
+Then:
+
+Monthly summary
+
+Use the exact visual hierarchy from Stitch.
+
+Do not redesign the screen.
+
+Do not make charts more prominent than today's collection.
 
 ==================================================
-FEATURE AUDIT
+ADD DUE SCREEN
 ==================================================
 
-Create a feature matrix with:
+The Add Due screen should visually support:
 
-Feature
-Status
-Evidence in code
-What actually works
-What is missing
-What must be rebuilt in Flutter
+Customer/person
+Amount
+Description/reason
+Due date
+Reminder
+Recurrence
 
-Use these statuses:
+Example:
 
-IMPLEMENTED
-PARTIALLY_IMPLEMENTED
-UI_ONLY
-MOCKED
-BROKEN
-MISSING
+Who?
+Rahul Kumar
 
-Audit at minimum:
+Amount
+₹1,500
 
-Authentication
-Business setup
-Home dashboard
-Today's collection
-Customer management
-Add customer
-Customer details
-Create due
-Edit due
-Delete/cancel due
-Due details
-Due status
-Upcoming payments
-Overdue payments
-Mark paid
-Partial payment
-Payment history
-Reminders
-Recurring payments
+For
+August Karate Fee
+
+Due date
+25 Aug 2026
+
+Reminder
+1 day before
+
+Repeat
+Monthly
+
+Create Due
+
+These are currently visual/static controls only.
+
+Production functionality will be added later.
+
+==================================================
+DUE STATUS COMPONENTS
+==================================================
+
+Implement reusable status components for:
+
+UPCOMING
+DUE
+OVERDUE
+PARTIALLY_PAID
+PAID
+CANCELLED
+
+Follow the Stitch visual language.
+
+Do not use excessive colors.
+
+Status colors should be accessible and consistent.
+
+==================================================
+REUSABLE COMPONENTS
+==================================================
+
+Create reusable Flutter widgets where appropriate.
+
+Examples:
+
+DueCard
+CustomerCard
+CollectionSummaryCard
+AmountDisplay
+StatusBadge
+PrimaryButton
+SecondaryButton
+AppTextField
+DateSelector
+ReminderSelector
+RecurrenceSelector
+SectionHeader
+EmptyState
+SearchField
+BottomNavigation
+AppBar
+
+Do not duplicate visually identical components.
+
+If an existing reusable component already exists from STEP 2, improve/reuse it instead of creating a duplicate.
+
+==================================================
+TYPOGRAPHY
+==================================================
+
+Implement the typography hierarchy from Stitch.
+
+Pay particular attention to:
+
+- Currency amounts
+- Page titles
+- Section headings
+- Due dates
+- Customer names
+- Status labels
+- Button labels
+- Secondary information
+
+Currency values should have strong visual hierarchy.
+
+For example:
+
+₹8,500
+
+should immediately communicate more importance than:
+
+To collect today
+
+while still following the exact Stitch design.
+
+==================================================
+SPACING AND SHAPES
+==================================================
+
+Use consistent design tokens for:
+
+- spacing
+- corner radius
+- elevation
+- borders
+- icon sizes
+- touch targets
+
+Do not hardcode random values repeatedly throughout widgets.
+
+Create centralized theme/design constants where appropriate.
+
+==================================================
+NAVIGATION
+==================================================
+
+Implement the application navigation structure.
+
+Primary navigation:
+
+Home
+Dues
+People
 Insights
-Empty states
-Validation
-Navigation
 
-==================================================
-DATA / STATE AUDIT
-==================================================
+Settings should be accessible through the appropriate secondary navigation location according to the Stitch design.
 
-Identify:
+Implement routes using GoRouter.
 
-- Customer model
-- Due model
-- Payment model
-- Business model
-- Reminder model
-- Recurrence model
+The navigation should work between the static screens.
 
-For each one, explain:
+Example:
 
-- where it is defined
-- what fields exist
-- how state is stored
-- whether it is persistent
-- whether it is only mock state
-- whether multiple screens share the same state
-- whether changes survive reload
-
-==================================================
-IMPORTANT TEST
-==================================================
-
-Determine whether this complete flow actually works:
-
-Login
-→ Home
+Home
 → Add Due
-→ Select customer
-→ Enter ₹1,500
-→ Enter description
-→ Select today's date
-→ Configure reminder
-→ Create
-→ Return to Home
-→ Today's collection increases
-→ Open the due
-→ Mark Paid
-→ Today's collection decreases
-→ Due becomes PAID
-→ Customer payment history updates
+→ Due Details
 
-Do not assume that an interaction works just because a button exists.
+Home
+→ People
+→ Person Details
 
-Trace the actual code/state changes.
+Home
+→ Notifications
 
-==================================================
-VISUAL AUDIT
-==================================================
+Home
+→ Insights
 
-Compare the current implementation against the imported Stitch design.
+Dues
+→ Due Details
 
-Identify:
-
-- wrong layouts
-- wrong spacing
-- wrong typography
-- wrong colors
-- wrong component shapes
-- missing components
-- incorrect navigation
-- inconsistent cards
-- incorrect hierarchy
-- missing empty states
-- incorrect mobile behavior
-
-Do not redesign anything yet.
+People
+→ Person Details
 
 ==================================================
-FINAL OUTPUT
+BOTTOM NAVIGATION
 ==================================================
 
-At the end, provide:
+Use the exact Stitch bottom navigation design.
 
-1. Overall project assessment
-2. Feature audit table
-3. Data/state audit
-4. Navigation audit
-5. Core user-flow audit
-6. Visual/design audit
-7. Critical bugs
-8. Missing MVP features
-9. Features that should be discarded/rebuilt
-10. Recommended Flutter architecture
-11. Recommended implementation order
+Do not add unnecessary navigation items.
 
-IMPORTANT:
+The navigation should:
 
-Do not modify files.
+- preserve selected state
+- animate only if consistent with the Stitch design
+- maintain navigation state appropriately
+- work correctly with GoRouter
 
-Do not install packages.
+==================================================
+MOCK DATA
+==================================================
 
-Do not convert anything yet.
+Use realistic mock data for visual rendering.
 
-Do not start implementing.
+Example customers:
 
-This is an inspection and planning task only.
+Rahul Kumar
+Arjun Sharma
+Sneha Reddy
+Vikram Rao
+
+Example dues:
+
+Rahul Kumar
+₹1,500
+August Karate Fee
+Due Today
+
+Arjun Sharma
+₹2,000
+Monthly Membership
+Due Today
+
+Sneha Reddy
+₹1,500
+August Tuition
+Paid
+
+Vikram Rao
+₹2,500
+Monthly Training
+Overdue
+
+Do not store this as production data.
+
+This is only for visual development.
+
+==================================================
+EMPTY STATES
+==================================================
+
+Create appropriate empty states for:
+
+No customers
+No dues
+No payments today
+No upcoming payments
+No overdue payments
+No notifications
+
+Follow the Stitch design language.
+
+==================================================
+MOBILE REQUIREMENTS
+==================================================
+
+This is a mobile application.
+
+Prioritize:
+
+- one-handed use
+- comfortable touch targets
+- safe areas
+- keyboard behavior
+- scrolling
+- small Android screens
+- different Android screen sizes
+
+Avoid horizontal overflow.
+
+Do not design for desktop.
+
+==================================================
+ACCESSIBILITY
+==================================================
+
+Ensure:
+
+- sufficient contrast
+- readable text
+- accessible touch targets
+- meaningful semantic labels
+- icons are not the only indication of meaning
+- status information is also communicated through text
+
+==================================================
+QUALITY CHECK
+==================================================
+
+After implementation:
+
+1. Run dart format.
+2. Run flutter analyze.
+3. Run available tests.
+4. Build/run the application.
+5. Check every implemented screen.
+6. Check navigation.
+7. Check for overflow.
+8. Check keyboard/input layouts.
+9. Check bottom navigation.
+10. Check small-screen behavior.
+
+Fix all compilation errors and obvious UI issues.
+
+==================================================
+IMPORTANT RESTRICTION
+==================================================
+
+Do not implement backend functionality in this step.
+
+Do not implement:
+
+Firebase Auth
+Firestore
+FCM
+SQLite persistence
+Local notifications
+Recurring-payment calculations
+Payment calculations
+Customer CRUD
+Production data repositories
+
+Only build the visual system and navigation.
+
+When finished, provide a concise report containing:
+
+1. Screens implemented
+2. Components created/reused
+3. Routes created
+4. Design-system changes
+5. Validation performed
+6. Any remaining visual differences from Stitch
+7. Any issues that need attention before moving to authentication
+
+Keep the application in a working state.

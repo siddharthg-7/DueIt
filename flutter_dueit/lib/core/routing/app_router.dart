@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dueit/shared/widgets/app_bottom_nav_bar.dart';
 import 'package:dueit/features/auth/presentation/screens/splash_screen.dart';
+import 'package:dueit/features/auth/presentation/screens/welcome_screen.dart';
 import 'package:dueit/features/auth/presentation/screens/login_screen.dart';
+import 'package:dueit/features/auth/presentation/screens/business_setup_screen.dart';
 import 'package:dueit/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:dueit/features/customers/presentation/screens/customers_screen.dart';
 import 'package:dueit/features/customers/presentation/screens/customer_details_screen.dart';
@@ -26,13 +28,25 @@ final appRouter = GoRouter(
       builder: (context, state) => const SplashScreen(),
     ),
 
+    // Welcome / Onboarding
+    GoRoute(
+      path: RouteNames.welcome,
+      builder: (context, state) => const WelcomeScreen(),
+    ),
+
     // Login
     GoRoute(
       path: RouteNames.login,
       builder: (context, state) => const LoginScreen(),
     ),
 
-    // Stateful Navigation Shell for Bottom Tabs
+    // Business Setup
+    GoRoute(
+      path: RouteNames.businessSetup,
+      builder: (context, state) => const BusinessSetupScreen(),
+    ),
+
+    // Stateful Navigation Shell for 4 Main Tabs
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) {
         return Scaffold(
@@ -49,7 +63,7 @@ final appRouter = GoRouter(
         );
       },
       branches: [
-        // Tab 0: Dashboard
+        // Tab 0: Home / Dashboard
         StatefulShellBranch(
           routes: [
             GoRoute(
@@ -59,22 +73,22 @@ final appRouter = GoRouter(
           ],
         ),
 
-        // Tab 1: Clients / Customers
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: RouteNames.customers,
-              builder: (context, state) => const CustomersScreen(),
-            ),
-          ],
-        ),
-
-        // Tab 2: History / Dues
+        // Tab 1: Dues / History
         StatefulShellBranch(
           routes: [
             GoRoute(
               path: RouteNames.dues,
               builder: (context, state) => const DuesScreen(),
+            ),
+          ],
+        ),
+
+        // Tab 2: People / Clients
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: RouteNames.customers,
+              builder: (context, state) => const CustomersScreen(),
             ),
           ],
         ),
@@ -91,7 +105,7 @@ final appRouter = GoRouter(
       ],
     ),
 
-    // Standalone & Drilldown Routes
+    // Standalone & Drilldown Sub-Routes
     GoRoute(
       path: RouteNames.customerDetails,
       parentNavigatorKey: _rootNavigatorKey,

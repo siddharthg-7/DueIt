@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -20,6 +21,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   late Animation<double> _fadeAnimation;
   double _progress = 0.0;
 
+  Timer? _timer;
+
   @override
   void initState() {
     super.initState();
@@ -38,36 +41,37 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     _controller.forward();
 
-    // Progress simulation
-    Future.delayed(const Duration(milliseconds: 100), _simulateProgress);
-  }
-
-  void _simulateProgress() async {
-    for (int i = 1; i <= 20; i++) {
-      await Future.delayed(const Duration(milliseconds: 70));
+    // Progress simulation with cancelable timer
+    int count = 0;
+    _timer = Timer.periodic(const Duration(milliseconds: 70), (timer) {
+      count++;
       if (mounted) {
         setState(() {
-          _progress = i / 20;
+          _progress = count / 20;
         });
       }
-    }
-
-    if (mounted) {
-      _navigateToNext();
-    }
+      if (count >= 20) {
+        timer.cancel();
+        if (mounted) {
+          _navigateToNext();
+        }
+      }
+    });
   }
 
   void _navigateToNext() {
+    _timer?.cancel();
     final user = ref.read(authControllerProvider).user;
     if (user != null && user.isSetupComplete) {
       context.go(RouteNames.dashboard);
     } else {
-      context.go(RouteNames.login);
+      context.go(RouteNames.welcome);
     }
   }
 
   @override
   void dispose() {
+    _timer?.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -177,8 +181,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                                   borderRadius: BorderRadius.circular(8),
                                   child: LinearProgressIndicator(
                                     value: _progress,
-                                    backgroundColor: Colors.black.withValues(alpha: 0.2),
-                                    valueColor: const AlwaysStoppedAnimation<Color>(
+                                    backgroundColor:
+                                        Colors.black.withValues(alpha: 0.2),
+                                    valueColor:
+                                        const AlwaysStoppedAnimation<Color>(
                                       AppColors.primaryFixed,
                                     ),
                                     minHeight: 4,

@@ -26,7 +26,7 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<UserEntity> signIn(String email, String password) async {
     await Future.delayed(const Duration(milliseconds: 800));
-    
+
     // Create a mock user on successful sign in
     _currentUser = UserEntity(
       id: 'user_${DateTime.now().millisecondsSinceEpoch}',

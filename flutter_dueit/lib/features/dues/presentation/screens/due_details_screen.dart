@@ -38,8 +38,11 @@ class DueDetailsScreen extends ConsumerWidget {
       );
     }
 
-    final customer = customerState.customers.where((c) => c.id == due.customerId).firstOrNull;
-    final duePayments = duesState.payments.where((p) => p.dueId == due.id).toList();
+    final customer = customerState.customers
+        .where((c) => c.id == due.customerId)
+        .firstOrNull;
+    final duePayments =
+        duesState.payments.where((p) => p.dueId == due.id).toList();
 
     final isPaid = due.status == DueStatus.paid;
     final isCancelled = due.status == DueStatus.cancelled;
@@ -91,7 +94,8 @@ class DueDetailsScreen extends ConsumerWidget {
                   if (due.paidAmount > 0 && !isPaid) ...[
                     const SizedBox(height: 6),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: AppColors.tertiaryFixed.withValues(alpha: 0.4),
                         borderRadius: BorderRadius.circular(12),
@@ -124,7 +128,8 @@ class DueDetailsScreen extends ConsumerWidget {
                     },
                     borderRadius: BorderRadius.circular(20),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
                         color: AppColors.surfaceContainerLow,
                         borderRadius: BorderRadius.circular(20),
@@ -142,7 +147,9 @@ class DueDetailsScreen extends ConsumerWidget {
                             ),
                             alignment: Alignment.center,
                             child: Text(
-                              due.customerName.isNotEmpty ? due.customerName[0].toUpperCase() : 'C',
+                              due.customerName.isNotEmpty
+                                  ? due.customerName[0].toUpperCase()
+                                  : 'C',
                               style: const TextStyle(
                                 color: AppColors.onPrimary,
                                 fontSize: 13,
@@ -153,10 +160,12 @@ class DueDetailsScreen extends ConsumerWidget {
                           const SizedBox(width: 8),
                           Text(
                             due.customerName,
-                            style: AppTypography.titleMedium.copyWith(fontSize: 14),
+                            style: AppTypography.titleMedium
+                                .copyWith(fontSize: 14),
                           ),
                           const SizedBox(width: 4),
-                          const Icon(Icons.chevron_right, size: 16, color: AppColors.outlineVariant),
+                          const Icon(Icons.chevron_right,
+                              size: 16, color: AppColors.outlineVariant),
                         ],
                       ),
                     ),
@@ -183,14 +192,16 @@ class DueDetailsScreen extends ConsumerWidget {
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.calendar_today, size: 16, color: AppColors.primary),
+                          const Icon(Icons.calendar_today,
+                              size: 16, color: AppColors.primary),
                           const SizedBox(width: 6),
                           Text('Due Date', style: AppTypography.labelSmall),
                         ],
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        DateFormatter.formatDisplayDate(DateFormatter.parseLocalDate(due.dueDate)),
+                        DateFormatter.formatDisplayDate(
+                            DateFormatter.parseLocalDate(due.dueDate)),
                         style: AppTypography.titleMedium.copyWith(fontSize: 15),
                       ),
                     ],
@@ -211,7 +222,8 @@ class DueDetailsScreen extends ConsumerWidget {
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.autorenew, size: 16, color: AppColors.primary),
+                          const Icon(Icons.autorenew,
+                              size: 16, color: AppColors.primary),
                           const SizedBox(width: 6),
                           Text('Recurrence', style: AppTypography.labelSmall),
                         ],
@@ -248,15 +260,19 @@ class DueDetailsScreen extends ConsumerWidget {
                       shape: BoxShape.circle,
                     ),
                     alignment: Alignment.center,
-                    child: const Icon(Icons.chat, color: AppColors.whatsAppDarkGreen, size: 20),
+                    child: const Icon(Icons.chat,
+                        color: AppColors.whatsAppDarkGreen, size: 20),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('WhatsApp Reminder', style: AppTypography.titleMedium.copyWith(fontSize: 14)),
-                        Text('One-tap prefilled reminder message', style: AppTypography.bodySmall),
+                        Text('WhatsApp Reminder',
+                            style: AppTypography.titleMedium
+                                .copyWith(fontSize: 14)),
+                        Text('One-tap prefilled reminder message',
+                            style: AppTypography.bodySmall),
                       ],
                     ),
                   ),
@@ -289,8 +305,11 @@ class DueDetailsScreen extends ConsumerWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Payment Transactions', style: AppTypography.titleMedium.copyWith(fontSize: 15)),
-                    Text('${duePayments.length} recorded', style: AppTypography.bodySmall),
+                    Text('Payment Transactions',
+                        style:
+                            AppTypography.titleMedium.copyWith(fontSize: 15)),
+                    Text('${duePayments.length} recorded',
+                        style: AppTypography.bodySmall),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -298,11 +317,13 @@ class DueDetailsScreen extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     alignment: Alignment.center,
-                    child: Text('No payments recorded for this due yet.', style: AppTypography.bodySmall),
+                    child: Text('No payments recorded for this due yet.',
+                        style: AppTypography.bodySmall),
                   )
                 else
                   ...duePayments.map((p) {
-                    final dateFormatted = DateFormatter.formatDateTime(DateTime.parse(p.paidAt));
+                    final dateFormatted =
+                        DateFormatter.formatDateTime(DateTime.parse(p.paidAt));
                     return Container(
                       margin: const EdgeInsets.only(bottom: 8),
                       padding: const EdgeInsets.all(12),
@@ -329,22 +350,29 @@ class DueDetailsScreen extends ConsumerWidget {
                                   ),
                                   const SizedBox(width: 6),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
                                       color: AppColors.surfaceContainerHigh,
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
                                       p.paymentMethod.displayName,
-                                      style: AppTypography.labelSmall.copyWith(fontSize: 10),
+                                      style: AppTypography.labelSmall
+                                          .copyWith(fontSize: 10),
                                     ),
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 2),
-                              Text('$dateFormatted • ${p.receiptNumber}', style: AppTypography.bodySmall.copyWith(fontSize: 11)),
+                              Text('$dateFormatted • ${p.receiptNumber}',
+                                  style: AppTypography.bodySmall
+                                      .copyWith(fontSize: 11)),
                               if (p.notes != null)
-                                Text(p.notes!, style: AppTypography.bodySmall.copyWith(fontStyle: FontStyle.italic, fontSize: 11)),
+                                Text(p.notes!,
+                                    style: AppTypography.bodySmall.copyWith(
+                                        fontStyle: FontStyle.italic,
+                                        fontSize: 11)),
                             ],
                           ),
                           OutlinedButton(
@@ -358,9 +386,11 @@ class DueDetailsScreen extends ConsumerWidget {
                             },
                             style: OutlinedButton.styleFrom(
                               minimumSize: const Size(64, 32),
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 8),
                             ),
-                            child: const Text('Receipt', style: TextStyle(fontSize: 11)),
+                            child: const Text('Receipt',
+                                style: TextStyle(fontSize: 11)),
                           ),
                         ],
                       ),
@@ -377,7 +407,8 @@ class DueDetailsScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: AppColors.surfaceContainerLowest,
-          border: const Border(top: BorderSide(color: AppColors.surfaceVariant)),
+          border:
+              const Border(top: BorderSide(color: AppColors.surfaceVariant)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.05),
@@ -395,7 +426,9 @@ class DueDetailsScreen extends ConsumerWidget {
                 height: 52,
                 child: FilledButton.icon(
                   onPressed: () async {
-                    final payment = await ref.read(duesControllerProvider.notifier).recordPayment(
+                    final payment = await ref
+                        .read(duesControllerProvider.notifier)
+                        .recordPayment(
                           dueId: due.id,
                           amount: due.remainingAmount,
                           paymentMethod: PaymentMethod.upi,
@@ -411,7 +444,8 @@ class DueDetailsScreen extends ConsumerWidget {
                     }
                   },
                   icon: const Icon(Icons.check_circle, size: 20),
-                  label: Text('Mark as Paid (${CurrencyFormatter.format(due.remainingAmount)})'),
+                  label: Text(
+                      'Mark as Paid (${CurrencyFormatter.format(due.remainingAmount)})'),
                 ),
               ),
               const SizedBox(height: 8),
@@ -419,7 +453,8 @@ class DueDetailsScreen extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () => RecordPaymentDialog.show(context, due: due),
+                      onPressed: () =>
+                          RecordPaymentDialog.show(context, due: due),
                       icon: const Icon(Icons.receipt_long, size: 16),
                       label: const Text('Record Partial'),
                     ),
@@ -438,10 +473,13 @@ class DueDetailsScreen extends ConsumerWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.verified, color: AppColors.onSecondaryContainer),
+                    const Icon(Icons.verified,
+                        color: AppColors.onSecondaryContainer),
                     const SizedBox(width: 8),
                     Text(
-                      isCancelled ? 'Due is Cancelled' : 'Payment Fully Settled',
+                      isCancelled
+                          ? 'Due is Cancelled'
+                          : 'Payment Fully Settled',
                       style: AppTypography.titleMedium.copyWith(
                         color: AppColors.onSecondaryContainer,
                         fontWeight: FontWeight.w700,

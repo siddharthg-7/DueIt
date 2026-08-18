@@ -43,12 +43,17 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
 
     final collected = monthDues.fold<double>(0, (sum, d) => sum + d.paidAmount);
     final pending = monthDues
-        .where((d) => d.status != DueStatus.paid && d.status != DueStatus.cancelled)
+        .where((d) =>
+            d.status != DueStatus.paid && d.status != DueStatus.cancelled)
         .fold<double>(0, (sum, d) => sum + d.remainingAmount);
     final totalExpected = collected + pending;
-    final rate = totalExpected > 0 ? ((collected / totalExpected) * 100).round() : 0;
+    final rate =
+        totalExpected > 0 ? ((collected / totalExpected) * 100).round() : 0;
     final paidCount = monthDues.where((d) => d.status == DueStatus.paid).length;
-    final pendingCount = monthDues.where((d) => d.status != DueStatus.paid && d.status != DueStatus.cancelled).length;
+    final pendingCount = monthDues
+        .where((d) =>
+            d.status != DueStatus.paid && d.status != DueStatus.cancelled)
+        .length;
 
     // Real Batch breakdown
     final Map<String, Map<String, double>> batchMap = {};
@@ -59,9 +64,11 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
       }
       final clientDues = monthDues.where((d) => d.customerId == cust.id);
       for (final d in clientDues) {
-        batchMap[batchName]!['collected'] = batchMap[batchName]!['collected']! + d.paidAmount;
+        batchMap[batchName]!['collected'] =
+            batchMap[batchName]!['collected']! + d.paidAmount;
         if (d.status != DueStatus.paid && d.status != DueStatus.cancelled) {
-          batchMap[batchName]!['pending'] = batchMap[batchName]!['pending']! + d.remainingAmount;
+          batchMap[batchName]!['pending'] =
+              batchMap[batchName]!['pending']! + d.remainingAmount;
         }
       }
     }
@@ -75,7 +82,8 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
       final bRate = bTot > 0 ? ((bCol / bTot) * 100).round() : 0;
       return {'name': e.key, 'collected': bCol, 'pending': bPen, 'rate': bRate};
     }).toList()
-      ..sort((a, b) => (b['collected'] as double).compareTo(a['collected'] as double));
+      ..sort((a, b) =>
+          (b['collected'] as double).compareTo(a['collected'] as double));
 
     return Scaffold(
       appBar: AppTopBar(
@@ -97,7 +105,8 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                   children: [
                     Text(
                       'Performance Analytics',
-                      style: AppTypography.headlineMedium.copyWith(fontWeight: FontWeight.w700),
+                      style: AppTypography.headlineMedium
+                          .copyWith(fontWeight: FontWeight.w700),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -128,7 +137,8 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                     ),
                     Text(
                       DateFormat('MMM yy').format(targetDate),
-                      style: AppTypography.labelSmall.copyWith(fontWeight: FontWeight.w700),
+                      style: AppTypography.labelSmall
+                          .copyWith(fontWeight: FontWeight.w700),
                     ),
                     IconButton(
                       icon: const Icon(Icons.chevron_right, size: 20),
@@ -160,7 +170,8 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Collection Efficiency', style: AppTypography.labelSmall),
+                      Text('Collection Efficiency',
+                          style: AppTypography.labelSmall),
                       const SizedBox(height: 4),
                       Text(
                         '$rate%',
@@ -170,7 +181,8 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text('$paidCount dues collected in $monthLabel', style: AppTypography.bodySmall),
+                      Text('$paidCount dues collected in $monthLabel',
+                          style: AppTypography.bodySmall),
                     ],
                   ),
                   SizedBox(
@@ -183,9 +195,11 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                           value: rate / 100,
                           strokeWidth: 6,
                           backgroundColor: AppColors.surfaceVariant,
-                          valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                              AppColors.primary),
                         ),
-                        const Icon(Icons.trending_up, color: AppColors.primary, size: 28),
+                        const Icon(Icons.trending_up,
+                            color: AppColors.primary, size: 28),
                       ],
                     ),
                   ),
@@ -211,7 +225,8 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.account_balance_wallet, size: 16, color: AppColors.primary),
+                          const Icon(Icons.account_balance_wallet,
+                              size: 16, color: AppColors.primary),
                           const SizedBox(width: 6),
                           Text('Collected', style: AppTypography.labelSmall),
                         ],
@@ -225,7 +240,8 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                         ),
                       ),
                       const SizedBox(height: 2),
-                      Text('$paidCount settlements', style: AppTypography.bodySmall),
+                      Text('$paidCount settlements',
+                          style: AppTypography.bodySmall),
                     ],
                   ),
                 ),
@@ -244,7 +260,8 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.warning_rounded, size: 16, color: AppColors.error),
+                          const Icon(Icons.warning_rounded,
+                              size: 16, color: AppColors.error),
                           const SizedBox(width: 6),
                           Text('Pending Due', style: AppTypography.labelSmall),
                         ],
@@ -258,7 +275,8 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                         ),
                       ),
                       const SizedBox(height: 2),
-                      Text('$pendingCount pending items', style: AppTypography.bodySmall),
+                      Text('$pendingCount pending items',
+                          style: AppTypography.bodySmall),
                     ],
                   ),
                 ),
@@ -281,13 +299,18 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Batch / Category Breakdown', style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.w600)),
-                    Text('${batchList.length} groups', style: AppTypography.bodySmall),
+                    Text('Batch / Category Breakdown',
+                        style: AppTypography.titleMedium
+                            .copyWith(fontWeight: FontWeight.w600)),
+                    Text('${batchList.length} groups',
+                        style: AppTypography.bodySmall),
                   ],
                 ),
                 const SizedBox(height: 16),
                 if (batchList.isEmpty)
-                  Center(child: Text('No active batches for $monthLabel.', style: AppTypography.bodySmall))
+                  Center(
+                      child: Text('No active batches for $monthLabel.',
+                          style: AppTypography.bodySmall))
                 else
                   ...batchList.map((batch) {
                     final bRate = batch['rate'] as int;
@@ -302,8 +325,11 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(batch['name'] as String, style: AppTypography.labelLarge),
-                              Text('$bRate%', style: AppTypography.labelLarge.copyWith(color: AppColors.primary)),
+                              Text(batch['name'] as String,
+                                  style: AppTypography.labelLarge),
+                              Text('$bRate%',
+                                  style: AppTypography.labelLarge
+                                      .copyWith(color: AppColors.primary)),
                             ],
                           ),
                           const SizedBox(height: 6),
@@ -313,15 +339,21 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                               value: bRate / 100,
                               minHeight: 6,
                               backgroundColor: AppColors.surfaceVariant,
-                              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                              valueColor: const AlwaysStoppedAnimation<Color>(
+                                  AppColors.primary),
                             ),
                           ),
                           const SizedBox(height: 4),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text('Collected: ${CurrencyFormatter.format(bCol)}', style: AppTypography.bodySmall.copyWith(fontSize: 11)),
-                              Text('Pending: ${CurrencyFormatter.format(bPen)}', style: AppTypography.bodySmall.copyWith(fontSize: 11)),
+                              Text(
+                                  'Collected: ${CurrencyFormatter.format(bCol)}',
+                                  style: AppTypography.bodySmall
+                                      .copyWith(fontSize: 11)),
+                              Text('Pending: ${CurrencyFormatter.format(bPen)}',
+                                  style: AppTypography.bodySmall
+                                      .copyWith(fontSize: 11)),
                             ],
                           ),
                         ],

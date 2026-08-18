@@ -32,11 +32,14 @@ class NotificationsScreen extends ConsumerWidget {
               children: [
                 Text(
                   '${reminderState.unreadCount} unread',
-                  style: AppTypography.bodySmall.copyWith(fontWeight: FontWeight.w600),
+                  style: AppTypography.bodySmall
+                      .copyWith(fontWeight: FontWeight.w600),
                 ),
                 TextButton(
                   onPressed: () {
-                    ref.read(reminderControllerProvider.notifier).markAllAsRead();
+                    ref
+                        .read(reminderControllerProvider.notifier)
+                        .markAllAsRead();
                   },
                   child: const Text('Mark all read'),
                 ),
@@ -48,7 +51,8 @@ class NotificationsScreen extends ConsumerWidget {
             const EmptyState(
               icon: Icons.notifications_off_outlined,
               title: 'No notifications',
-              description: 'You\'re all caught up! Dues alerts and payment receipts will appear here.',
+              description:
+                  'You\'re all caught up! Dues alerts and payment receipts will appear here.',
             )
           else
             ...notifications.map((n) {
@@ -88,7 +92,9 @@ class NotificationsScreen extends ConsumerWidget {
                 key: Key(n.id),
                 direction: DismissDirection.endToStart,
                 onDismissed: (_) {
-                  ref.read(reminderControllerProvider.notifier).deleteNotification(n.id);
+                  ref
+                      .read(reminderControllerProvider.notifier)
+                      .deleteNotification(n.id);
                 },
                 background: Container(
                   alignment: Alignment.centerRight,
@@ -105,13 +111,17 @@ class NotificationsScreen extends ConsumerWidget {
                         : AppColors.surfaceContainerLowest,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: n.read ? AppColors.surfaceVariant : AppColors.primary.withValues(alpha: 0.3),
+                      color: n.read
+                          ? AppColors.surfaceVariant
+                          : AppColors.primary.withValues(alpha: 0.3),
                       width: n.read ? 1 : 1.5,
                     ),
                   ),
                   child: InkWell(
                     onTap: () {
-                      ref.read(reminderControllerProvider.notifier).markAsRead(n.id);
+                      ref
+                          .read(reminderControllerProvider.notifier)
+                          .markAsRead(n.id);
                       if (n.dueId != null) {
                         context.push('/due/${n.dueId}');
                       }
@@ -136,18 +146,23 @@ class NotificationsScreen extends ConsumerWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
                                     n.title,
                                     style: AppTypography.titleMedium.copyWith(
-                                      fontWeight: n.read ? FontWeight.w500 : FontWeight.w700,
+                                      fontWeight: n.read
+                                          ? FontWeight.w500
+                                          : FontWeight.w700,
                                       fontSize: 14,
                                     ),
                                   ),
                                   Text(
-                                    DateFormatter.formatRelativeTime(n.timestamp),
-                                    style: AppTypography.bodySmall.copyWith(fontSize: 10.5),
+                                    DateFormatter.formatRelativeTime(
+                                        n.timestamp),
+                                    style: AppTypography.bodySmall
+                                        .copyWith(fontSize: 10.5),
                                   ),
                                 ],
                               ),
@@ -165,7 +180,8 @@ class NotificationsScreen extends ConsumerWidget {
                                       ),
                                     ),
                                     const SizedBox(width: 4),
-                                    const Icon(Icons.arrow_forward, size: 12, color: AppColors.primary),
+                                    const Icon(Icons.arrow_forward,
+                                        size: 12, color: AppColors.primary),
                                   ],
                                 ),
                               ],

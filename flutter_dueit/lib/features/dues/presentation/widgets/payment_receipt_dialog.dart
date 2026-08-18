@@ -39,7 +39,8 @@ class PaymentReceiptDialog extends StatelessWidget {
   void _shareViaWhatsApp(BuildContext context) async {
     final phone = customerPhone?.replaceAll(RegExp(r'\D'), '') ?? '';
     final bName = businessProfile?.businessName ?? 'DueIt';
-    final dateFormatted = DateFormatter.formatDateTime(DateTime.parse(payment.paidAt));
+    final dateFormatted =
+        DateFormatter.formatDateTime(DateTime.parse(payment.paidAt));
 
     final text = '*OFFICIAL PAYMENT RECEIPT*\n\n'
         '*$bName*\n'
@@ -48,7 +49,8 @@ class PaymentReceiptDialog extends StatelessWidget {
         'We have received your payment of *₹${payment.amount.toInt()}* via *${payment.paymentMethod.displayName}* on $dateFormatted.\n\n'
         'Thank you for your timely payment!';
 
-    final uri = Uri.parse('https://api.whatsapp.com/send?phone=$phone&text=${Uri.encodeComponent(text)}');
+    final uri = Uri.parse(
+        'https://api.whatsapp.com/send?phone=$phone&text=${Uri.encodeComponent(text)}');
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
@@ -56,7 +58,8 @@ class PaymentReceiptDialog extends StatelessWidget {
 
   void _copyReceipt(BuildContext context) {
     final bName = businessProfile?.businessName ?? 'DueIt';
-    final dateFormatted = DateFormatter.formatDateTime(DateTime.parse(payment.paidAt));
+    final dateFormatted =
+        DateFormatter.formatDateTime(DateTime.parse(payment.paidAt));
 
     final text = 'PAYMENT RECEIPT\n'
         'Receipt No: ${payment.receiptNumber}\n'
@@ -76,7 +79,8 @@ class PaymentReceiptDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bName = businessProfile?.businessName ?? 'DueIt Business';
-    final dateFormatted = DateFormatter.formatDateTime(DateTime.parse(payment.paidAt));
+    final dateFormatted =
+        DateFormatter.formatDateTime(DateTime.parse(payment.paidAt));
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
@@ -95,7 +99,8 @@ class PaymentReceiptDialog extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.verified, color: AppColors.onPrimary, size: 22),
+                      const Icon(Icons.verified,
+                          color: AppColors.onPrimary, size: 22),
                       const SizedBox(width: 8),
                       Text(
                         'Payment Receipt',
@@ -107,7 +112,8 @@ class PaymentReceiptDialog extends StatelessWidget {
                     ],
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close, color: AppColors.onPrimary, size: 20),
+                    icon: const Icon(Icons.close,
+                        color: AppColors.onPrimary, size: 20),
                     visualDensity: VisualDensity.compact,
                     onPressed: () => Navigator.pop(context),
                   ),
@@ -135,7 +141,8 @@ class PaymentReceiptDialog extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: AppColors.secondaryContainer,
                       borderRadius: BorderRadius.circular(12),

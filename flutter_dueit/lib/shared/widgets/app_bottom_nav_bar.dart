@@ -29,22 +29,26 @@ class AppBottomNavBar extends StatelessWidget {
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard, color: AppColors.onSecondaryContainer),
-            label: 'Dashboard',
+            selectedIcon:
+                Icon(Icons.dashboard, color: AppColors.onSecondaryContainer),
+            label: 'Home',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.receipt_long_outlined),
+            selectedIcon:
+                Icon(Icons.receipt_long, color: AppColors.onSecondaryContainer),
+            label: 'Dues',
           ),
           NavigationDestination(
             icon: Icon(Icons.group_outlined),
-            selectedIcon: Icon(Icons.group, color: AppColors.onSecondaryContainer),
-            label: 'Clients',
+            selectedIcon:
+                Icon(Icons.group, color: AppColors.onSecondaryContainer),
+            label: 'People',
           ),
           NavigationDestination(
-            icon: Icon(Icons.history_outlined),
-            selectedIcon: Icon(Icons.history, color: AppColors.onSecondaryContainer),
-            label: 'History',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.donut_large_outlined),
-            selectedIcon: Icon(Icons.donut_large, color: AppColors.onSecondaryContainer),
+            icon: Icon(Icons.insights_outlined),
+            selectedIcon:
+                Icon(Icons.insights, color: AppColors.onSecondaryContainer),
             label: 'Insights',
           ),
         ],

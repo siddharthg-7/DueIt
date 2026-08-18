@@ -53,7 +53,9 @@ class DueCard extends StatelessWidget {
                 ),
                 alignment: Alignment.center,
                 child: Text(
-                  due.customerName.isNotEmpty ? due.customerName[0].toUpperCase() : 'D',
+                  due.customerName.isNotEmpty
+                      ? due.customerName[0].toUpperCase()
+                      : 'D',
                   style: AppTypography.titleMedium.copyWith(
                     color: isPaid
                         ? AppColors.onSecondaryContainer
@@ -95,8 +97,11 @@ class DueCard extends StatelessWidget {
                           child: Text(
                             '•  Due ${DateFormatter.formatShortDate(DateFormatter.parseLocalDate(due.dueDate))}',
                             style: AppTypography.bodySmall.copyWith(
-                              color: isOverdue ? AppColors.error : AppColors.onSurfaceVariant,
-                              fontWeight: isOverdue ? FontWeight.w600 : FontWeight.w400,
+                              color: isOverdue
+                                  ? AppColors.error
+                                  : AppColors.onSurfaceVariant,
+                              fontWeight:
+                                  isOverdue ? FontWeight.w600 : FontWeight.w400,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -133,18 +138,22 @@ class DueCard extends StatelessWidget {
                         if (onQuickWhatsApp != null && !isPaid)
                           IconButton(
                             onPressed: onQuickWhatsApp,
-                            icon: const Icon(Icons.chat, size: 18, color: AppColors.whatsAppDarkGreen),
+                            icon: const Icon(Icons.chat,
+                                size: 18, color: AppColors.whatsAppDarkGreen),
                             visualDensity: VisualDensity.compact,
                             padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                            constraints: const BoxConstraints(
+                                minWidth: 32, minHeight: 32),
                           ),
                         if (onQuickPay != null && !isPaid)
                           IconButton(
                             onPressed: onQuickPay,
-                            icon: const Icon(Icons.check_circle_outline, size: 20, color: AppColors.primary),
+                            icon: const Icon(Icons.check_circle_outline,
+                                size: 20, color: AppColors.primary),
                             visualDensity: VisualDensity.compact,
                             padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                            constraints: const BoxConstraints(
+                                minWidth: 32, minHeight: 32),
                           ),
                       ],
                     ),

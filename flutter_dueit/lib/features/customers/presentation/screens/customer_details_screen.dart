@@ -28,7 +28,8 @@ class CustomerDetailsScreen extends ConsumerWidget {
     final user = ref.watch(authControllerProvider).user;
     final reminderRepo = ref.watch(reminderRepositoryProvider);
 
-    final customer = customerState.customers.where((c) => c.id == customerId).firstOrNull;
+    final customer =
+        customerState.customers.where((c) => c.id == customerId).firstOrNull;
 
     if (customer == null) {
       return Scaffold(
@@ -37,15 +38,21 @@ class CustomerDetailsScreen extends ConsumerWidget {
       );
     }
 
-    final clientDues = duesState.dues.where((d) => d.customerId == customer.id).toList();
-    final clientPayments = duesState.payments.where((p) => p.customerId == customer.id).toList();
+    final clientDues =
+        duesState.dues.where((d) => d.customerId == customer.id).toList();
+    final clientPayments =
+        duesState.payments.where((p) => p.customerId == customer.id).toList();
 
-    final outstandingDues = clientDues.where(
-      (d) => d.status != DueStatus.paid && d.status != DueStatus.cancelled,
-    ).toList();
+    final outstandingDues = clientDues
+        .where(
+          (d) => d.status != DueStatus.paid && d.status != DueStatus.cancelled,
+        )
+        .toList();
 
-    final totalOutstanding = outstandingDues.fold<double>(0, (sum, d) => sum + d.remainingAmount);
-    final totalCollected = clientPayments.fold<double>(0, (sum, p) => sum + p.amount);
+    final totalOutstanding =
+        outstandingDues.fold<double>(0, (sum, d) => sum + d.remainingAmount);
+    final totalCollected =
+        clientPayments.fold<double>(0, (sum, p) => sum + p.amount);
 
     void sendWhatsAppStatement() async {
       final url = reminderRepo.generateCustomerStatementWhatsAppUrl(
@@ -101,7 +108,8 @@ class CustomerDetailsScreen extends ConsumerWidget {
                   const SizedBox(height: 12),
                   Text(
                     customer.name,
-                    style: AppTypography.headlineMedium.copyWith(fontWeight: FontWeight.w700),
+                    style: AppTypography.headlineMedium
+                        .copyWith(fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -111,14 +119,16 @@ class CustomerDetailsScreen extends ConsumerWidget {
                   if (customer.notes != null) ...[
                     const SizedBox(height: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: AppColors.surfaceContainerHigh,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         customer.notes!,
-                        style: AppTypography.labelSmall.copyWith(fontWeight: FontWeight.w600),
+                        style: AppTypography.labelSmall
+                            .copyWith(fontWeight: FontWeight.w600),
                       ),
                     ),
                   ],
@@ -134,7 +144,8 @@ class CustomerDetailsScreen extends ConsumerWidget {
                           if (await canLaunchUrl(uri)) await launchUrl(uri);
                         },
                         icon: const Icon(Icons.call, size: 16),
-                        label: Text(customer.phone, style: const TextStyle(fontSize: 12)),
+                        label: Text(customer.phone,
+                            style: const TextStyle(fontSize: 12)),
                         style: OutlinedButton.styleFrom(
                           minimumSize: const Size(120, 36),
                         ),
@@ -143,7 +154,8 @@ class CustomerDetailsScreen extends ConsumerWidget {
                       FilledButton.icon(
                         onPressed: sendWhatsAppStatement,
                         icon: const Icon(Icons.chat, size: 16),
-                        label: const Text('Statement', style: TextStyle(fontSize: 12)),
+                        label: const Text('Statement',
+                            style: TextStyle(fontSize: 12)),
                         style: FilledButton.styleFrom(
                           backgroundColor: AppColors.whatsAppGreen,
                           minimumSize: const Size(100, 36),
@@ -173,9 +185,13 @@ class CustomerDetailsScreen extends ConsumerWidget {
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.warning_rounded, size: 15, color: AppColors.error),
+                          const Icon(Icons.warning_rounded,
+                              size: 15, color: AppColors.error),
                           const SizedBox(width: 4),
-                          Text('Outstanding', style: AppTypography.labelSmall.copyWith(color: AppColors.error, fontWeight: FontWeight.w700)),
+                          Text('Outstanding',
+                              style: AppTypography.labelSmall.copyWith(
+                                  color: AppColors.error,
+                                  fontWeight: FontWeight.w700)),
                         ],
                       ),
                       const SizedBox(height: 6),
@@ -187,7 +203,8 @@ class CustomerDetailsScreen extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: 2),
-                      Text('${outstandingDues.length} pending dues', style: AppTypography.bodySmall),
+                      Text('${outstandingDues.length} pending dues',
+                          style: AppTypography.bodySmall),
                     ],
                   ),
                 ),
@@ -206,18 +223,24 @@ class CustomerDetailsScreen extends ConsumerWidget {
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.account_balance_wallet, size: 15, color: AppColors.primary),
+                          const Icon(Icons.account_balance_wallet,
+                              size: 15, color: AppColors.primary),
                           const SizedBox(width: 4),
-                          Text('Total Collected', style: AppTypography.labelSmall.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                          Text('Total Collected',
+                              style: AppTypography.labelSmall.copyWith(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w700)),
                         ],
                       ),
                       const SizedBox(height: 6),
                       Text(
                         CurrencyFormatter.format(totalCollected),
-                        style: AppTypography.headlineMedium.copyWith(fontWeight: FontWeight.w700),
+                        style: AppTypography.headlineMedium
+                            .copyWith(fontWeight: FontWeight.w700),
                       ),
                       const SizedBox(height: 2),
-                      Text('${clientPayments.length} payments', style: AppTypography.bodySmall),
+                      Text('${clientPayments.length} payments',
+                          style: AppTypography.bodySmall),
                     ],
                   ),
                 ),
@@ -233,7 +256,8 @@ class CustomerDetailsScreen extends ConsumerWidget {
                 child: SizedBox(
                   height: 48,
                   child: FilledButton.icon(
-                    onPressed: () => context.push('/add-due?customerId=${customer.id}'),
+                    onPressed: () =>
+                        context.push('/add-due?customerId=${customer.id}'),
                     icon: const Icon(Icons.add, size: 18),
                     label: const Text('Add Due'),
                   ),
@@ -245,7 +269,8 @@ class CustomerDetailsScreen extends ConsumerWidget {
                   child: SizedBox(
                     height: 48,
                     child: OutlinedButton.icon(
-                      onPressed: () => RecordPaymentDialog.show(context, due: outstandingDues.first),
+                      onPressed: () => RecordPaymentDialog.show(context,
+                          due: outstandingDues.first),
                       icon: const Icon(Icons.receipt_long, size: 18),
                       label: const Text('Record Payment'),
                     ),
@@ -256,7 +281,8 @@ class CustomerDetailsScreen extends ConsumerWidget {
           const SizedBox(height: 20),
 
           // Dues List Section
-          Text('Dues & History', style: AppTypography.titleMedium.copyWith(fontSize: 16)),
+          Text('Dues & History',
+              style: AppTypography.titleMedium.copyWith(fontSize: 16)),
           const SizedBox(height: 10),
           if (clientDues.isEmpty)
             Container(
@@ -266,7 +292,8 @@ class CustomerDetailsScreen extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(color: AppColors.surfaceVariant),
               ),
-              child: const Center(child: Text('No dues created for this client yet.')),
+              child: const Center(
+                  child: Text('No dues created for this client yet.')),
             )
           else
             ...clientDues.map((d) => Padding(
@@ -281,7 +308,8 @@ class CustomerDetailsScreen extends ConsumerWidget {
 
           // Issued Receipts Section
           if (clientPayments.isNotEmpty) ...[
-            Text('Issued Receipts (${clientPayments.length})', style: AppTypography.titleMedium.copyWith(fontSize: 16)),
+            Text('Issued Receipts (${clientPayments.length})',
+                style: AppTypography.titleMedium.copyWith(fontSize: 16)),
             const SizedBox(height: 10),
             ...clientPayments.map((p) => Container(
                   margin: const EdgeInsets.only(bottom: 8),
@@ -297,7 +325,10 @@ class CustomerDetailsScreen extends ConsumerWidget {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(p.receiptNumber, style: AppTypography.labelLarge.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                          Text(p.receiptNumber,
+                              style: AppTypography.labelLarge.copyWith(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w700)),
                           Text(
                             '${DateFormatter.formatDisplayDate(DateTime.parse(p.paidAt))} • ${p.paymentMethod.displayName}',
                             style: AppTypography.bodySmall,
@@ -306,10 +337,13 @@ class CustomerDetailsScreen extends ConsumerWidget {
                       ),
                       Row(
                         children: [
-                          Text(CurrencyFormatter.format(p.amount), style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.w700)),
+                          Text(CurrencyFormatter.format(p.amount),
+                              style: AppTypography.titleMedium
+                                  .copyWith(fontWeight: FontWeight.w700)),
                           const SizedBox(width: 8),
                           IconButton(
-                            icon: const Icon(Icons.chevron_right, size: 20, color: AppColors.outlineVariant),
+                            icon: const Icon(Icons.chevron_right,
+                                size: 20, color: AppColors.outlineVariant),
                             onPressed: () {
                               PaymentReceiptDialog.show(
                                 context,

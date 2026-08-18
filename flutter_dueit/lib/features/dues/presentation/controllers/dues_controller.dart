@@ -95,7 +95,8 @@ class DuesController extends StateNotifier<DuesState> {
       customerName: customerName,
       amount: amount,
       paidAmount: 0,
-      description: description.trim().isEmpty ? 'Payment Due' : description.trim(),
+      description:
+          description.trim().isEmpty ? 'Payment Due' : description.trim(),
       dueDate: dueDate,
       status: dueDate == todayStr ? DueStatus.due : DueStatus.upcoming,
       reminderType: reminderType,

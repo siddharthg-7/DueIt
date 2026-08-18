@@ -12,13 +12,14 @@ class PrimaryButton extends StatelessWidget {
 
   const PrimaryButton({
     super.key,
-    required this.text,
+    String? text,
+    String? label,
     this.onPressed,
     this.icon,
     this.isLoading = false,
     this.height = 54,
     this.backgroundColor,
-  });
+  }) : text = text ?? label ?? '';
 
   @override
   Widget build(BuildContext context) {

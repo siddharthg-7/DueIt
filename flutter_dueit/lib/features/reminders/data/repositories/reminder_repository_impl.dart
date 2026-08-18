@@ -18,7 +18,8 @@ class ReminderRepositoryImpl implements ReminderRepository {
     NotificationEntity(
       id: 'notif_2',
       title: 'Due Today',
-      message: 'Rahul Kumar has ₹1,500 due today for August Advanced Karate Fee.',
+      message:
+          'Rahul Kumar has ₹1,500 due today for August Advanced Karate Fee.',
       type: NotificationType.dueToday,
       timestamp: DateTime.now().subtract(const Duration(hours: 5)),
       read: false,
@@ -93,9 +94,13 @@ class ReminderRepositoryImpl implements ReminderRepository {
   }) {
     final phone = customer.phone.replaceAll(RegExp(r'\D'), '');
     final bName = businessName ?? 'DueIt';
-    final total = outstandingDues.fold<double>(0, (sum, d) => sum + d.remainingAmount);
+    final total =
+        outstandingDues.fold<double>(0, (sum, d) => sum + d.remainingAmount);
 
-    final duesLines = outstandingDues.map((d) => '• ${d.description}: ₹${d.remainingAmount.toInt()} (Due: ${d.dueDate})').join('\n');
+    final duesLines = outstandingDues
+        .map((d) =>
+            '• ${d.description}: ₹${d.remainingAmount.toInt()} (Due: ${d.dueDate})')
+        .join('\n');
 
     final String text = '*ACCOUNT STATEMENT*\n\n'
         '*$bName*\n'

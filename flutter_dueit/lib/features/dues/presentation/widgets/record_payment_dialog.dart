@@ -25,7 +25,8 @@ class RecordPaymentDialog extends ConsumerStatefulWidget {
   }
 
   @override
-  ConsumerState<RecordPaymentDialog> createState() => _RecordPaymentDialogState();
+  ConsumerState<RecordPaymentDialog> createState() =>
+      _RecordPaymentDialogState();
 }
 
 class _RecordPaymentDialogState extends ConsumerState<RecordPaymentDialog> {
@@ -72,7 +73,8 @@ class _RecordPaymentDialogState extends ConsumerState<RecordPaymentDialog> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.receipt_long, color: AppColors.primary, size: 24),
+                  const Icon(Icons.receipt_long,
+                      color: AppColors.primary, size: 24),
                   const SizedBox(width: 8),
                   Text(
                     'Record Payment',
@@ -106,7 +108,8 @@ class _RecordPaymentDialogState extends ConsumerState<RecordPaymentDialog> {
                   children: [
                     Text(
                       widget.due.customerName,
-                      style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.w600),
+                      style: AppTypography.titleMedium
+                          .copyWith(fontWeight: FontWeight.w600),
                     ),
                     Text(
                       widget.due.description,
@@ -138,7 +141,8 @@ class _RecordPaymentDialogState extends ConsumerState<RecordPaymentDialog> {
           TextField(
             controller: _amountController,
             keyboardType: TextInputType.number,
-            style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.w700),
+            style:
+                AppTypography.titleMedium.copyWith(fontWeight: FontWeight.w700),
             decoration: InputDecoration(
               prefixText: '₹ ',
               suffixIcon: TextButton(
@@ -195,19 +199,24 @@ class _RecordPaymentDialogState extends ConsumerState<RecordPaymentDialog> {
                 final numAmount = double.tryParse(_amountController.text);
                 if (numAmount == null || numAmount <= 0) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please enter a valid amount.')),
+                    const SnackBar(
+                        content: Text('Please enter a valid amount.')),
                   );
                   return;
                 }
 
-                final payment = await ref.read(duesControllerProvider.notifier).recordPayment(
+                final payment = await ref
+                    .read(duesControllerProvider.notifier)
+                    .recordPayment(
                       dueId: widget.due.id,
                       amount: numAmount,
                       paymentMethod: _selectedMethod,
-                      notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+                      notes: _notesController.text.trim().isEmpty
+                          ? null
+                          : _notesController.text.trim(),
                     );
 
-                if (mounted) {
+                if (mounted && context.mounted) {
                   Navigator.pop(context);
 
                   // Show receipt dialog
@@ -218,12 +227,14 @@ class _RecordPaymentDialogState extends ConsumerState<RecordPaymentDialog> {
                       .where((c) => c.id == widget.due.customerId)
                       .firstOrNull;
 
-                  PaymentReceiptDialog.show(
-                    context,
-                    payment: payment,
-                    businessProfile: user,
-                    customerPhone: customer?.phone,
-                  );
+                  if (context.mounted) {
+                    PaymentReceiptDialog.show(
+                      context,
+                      payment: payment,
+                      businessProfile: user,
+                      customerPhone: customer?.phone,
+                    );
+                  }
                 }
               },
               icon: const Icon(Icons.check_circle, size: 20),
