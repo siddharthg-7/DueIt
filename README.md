@@ -1,4 +1,4 @@
-# DueIt - Financial Collection Assistant
+# DueIt - Financial Collection Assistant  ( Mobile App ) 
 
 **DueIt** is a mobile financial collection assistant for small business owners. Its core purpose is: *"Know what you're owed. Know when to collect. Never miss a payment."*
 
