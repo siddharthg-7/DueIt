@@ -155,6 +155,8 @@ class DueEntity {
   final bool reminderEnabled;
   final RecurrenceType recurrence;
   final int recurringCycle;
+  final String? recurringScheduleId;
+  final String? occurrenceDate;
   final String? paidAt;
   final String? paymentMethod;
   final DateTime createdAt;
@@ -175,6 +177,8 @@ class DueEntity {
     this.reminderEnabled = true,
     this.recurrence = RecurrenceType.none,
     this.recurringCycle = 1,
+    this.recurringScheduleId,
+    this.occurrenceDate,
     this.paidAt,
     this.paymentMethod,
     DateTime? createdAt,
@@ -185,6 +189,8 @@ class DueEntity {
   double get remainingAmount => amount - paidAmount;
   bool get isFullyPaid => paidAmount >= amount || status == DueStatus.paid;
   bool get isCancelled => status == DueStatus.cancelled;
+  bool get isRecurring =>
+      recurringScheduleId != null && recurringScheduleId!.isNotEmpty;
 
   /// Deterministic status derivation based on due date and cancellation state
   static DueStatus deriveStatus({
@@ -226,6 +232,8 @@ class DueEntity {
     bool? reminderEnabled,
     RecurrenceType? recurrence,
     int? recurringCycle,
+    String? recurringScheduleId,
+    String? occurrenceDate,
     String? paidAt,
     String? paymentMethod,
     DateTime? createdAt,
@@ -246,6 +254,8 @@ class DueEntity {
       reminderEnabled: reminderEnabled ?? this.reminderEnabled,
       recurrence: recurrence ?? this.recurrence,
       recurringCycle: recurringCycle ?? this.recurringCycle,
+      recurringScheduleId: recurringScheduleId ?? this.recurringScheduleId,
+      occurrenceDate: occurrenceDate ?? this.occurrenceDate,
       paidAt: paidAt ?? this.paidAt,
       paymentMethod: paymentMethod ?? this.paymentMethod,
       createdAt: createdAt ?? this.createdAt,
@@ -269,6 +279,8 @@ class DueEntity {
       'reminderEnabled': reminderEnabled,
       'recurrence': recurrence.name,
       'recurringCycle': recurringCycle,
+      'recurringScheduleId': recurringScheduleId,
+      'occurrenceDate': occurrenceDate,
       'paidAt': paidAt,
       'paymentMethod': paymentMethod,
       'createdAt': createdAt.toIso8601String(),
@@ -305,6 +317,8 @@ class DueEntity {
       reminderEnabled: map['reminderEnabled'] as bool? ?? true,
       recurrence: RecurrenceType.fromString(map['recurrence'] as String?),
       recurringCycle: (map['recurringCycle'] as num?)?.toInt() ?? 1,
+      recurringScheduleId: map['recurringScheduleId'] as String?,
+      occurrenceDate: map['occurrenceDate'] as String?,
       paidAt: map['paidAt'] as String?,
       paymentMethod: map['paymentMethod'] as String?,
       createdAt: parseDate(map['createdAt']),

@@ -10,10 +10,13 @@ import 'package:dueit/shared/widgets/app_top_bar.dart';
 import 'package:dueit/shared/widgets/due_card.dart';
 import 'package:dueit/shared/widgets/empty_state.dart';
 import 'package:dueit/shared/widgets/search_field.dart';
+import 'package:dueit/shared/widgets/recurring_schedule_card.dart';
 import 'package:dueit/features/customers/presentation/controllers/customer_controller.dart';
 import 'package:dueit/features/reminders/presentation/controllers/reminder_controller.dart';
 import '../../domain/entities/due_entity.dart';
+import '../../domain/entities/recurring_due_schedule_entity.dart';
 import '../controllers/dues_controller.dart';
+import '../controllers/recurring_dues_controller.dart';
 
 class DuesScreen extends ConsumerStatefulWidget {
   const DuesScreen({super.key});
@@ -50,14 +53,119 @@ class _DuesScreenState extends ConsumerState<DuesScreen> {
     return 4; // Paid / settled
   }
 
+  void _showEditScheduleDialog(
+      BuildContext context, RecurringDueScheduleEntity schedule) {
+    final amountCtrl =
+        TextEditingController(text: schedule.amount.toInt().toString());
+    final descCtrl = TextEditingController(text: schedule.description);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surfaceContainerLowest,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (bottomContext) => Padding(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 20,
+          bottom: MediaQuery.of(bottomContext).viewInsets.bottom + 20,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Edit Recurring Schedule',
+                    style: AppTypography.titleMedium
+                        .copyWith(fontWeight: FontWeight.w700)),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(bottomContext),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Changes will apply to future generated dues. Existing historical dues will not be altered.',
+              style: AppTypography.bodySmall
+                  .copyWith(color: AppColors.onSurfaceVariant),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: amountCtrl,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Amount (₹)',
+                prefixText: '₹ ',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: descCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Description',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: FilledButton(
+                onPressed: () async {
+                  final newAmount = double.tryParse(amountCtrl.text.trim());
+                  if (newAmount == null || newAmount <= 0) return;
+                  final newDesc = descCtrl.text.trim();
+                  if (newDesc.isEmpty) return;
+
+                  final updated = schedule.copyWith(
+                    amount: newAmount,
+                    description: newDesc,
+                  );
+
+                  await ref
+                      .read(recurringDuesControllerProvider.notifier)
+                      .updateSchedule(updated);
+
+                  if (bottomContext.mounted) {
+                    Navigator.pop(bottomContext);
+                  }
+                },
+                child: const Text('Save Changes'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final duesState = ref.watch(duesControllerProvider);
+    final recurringState = ref.watch(recurringDuesControllerProvider);
     final customerState = ref.watch(customerControllerProvider);
     final unreadCount = ref.watch(reminderControllerProvider).unreadCount;
 
     // Build customer map for instant O(1) customer name resolution
     final customerMap = {for (var c in customerState.customers) c.id: c.name};
+
+    final isRecurringTab = duesState.duesFilter == 'Recurring';
+
+    // Filter recurring schedules if on recurring tab
+    final filteredSchedules = recurringState.schedules.where((s) {
+      final custName = customerMap[s.customerId] ?? s.customerName;
+      final q = _searchController.text.toLowerCase().trim();
+      return q.isEmpty ||
+          custName.toLowerCase().contains(q) ||
+          s.description.toLowerCase().contains(q);
+    }).toList();
 
     // Filter out cancelled dues from active lists
     final activeDues =
@@ -110,7 +218,17 @@ class _DuesScreenState extends ConsumerState<DuesScreen> {
           (d.status == DueStatus.paid ? d.paidAmount : d.remainingAmount);
     });
 
-    final filterTabs = ['All', 'Today', 'Upcoming', 'Overdue', 'Paid'];
+    final totalRecurring =
+        filteredSchedules.fold<double>(0, (sum, s) => sum + s.amount);
+
+    final filterTabs = [
+      'All',
+      'Today',
+      'Upcoming',
+      'Overdue',
+      'Paid',
+      'Recurring'
+    ];
 
     String emptyTitle() {
       if (_searchController.text.isNotEmpty) return 'No matching dues';
@@ -123,6 +241,8 @@ class _DuesScreenState extends ConsumerState<DuesScreen> {
           return 'No upcoming dues';
         case 'Paid':
           return 'No settled dues';
+        case 'Recurring':
+          return 'No recurring dues yet';
         default:
           return 'No payments tracked yet';
       }
@@ -141,6 +261,8 @@ class _DuesScreenState extends ConsumerState<DuesScreen> {
           return 'No upcoming payments scheduled.';
         case 'Paid':
           return 'Settled dues will appear here.';
+        case 'Recurring':
+          return 'Create a recurring schedule to automatically track repeated collections.';
         default:
           return 'Create your first due to start tracking collections.';
       }
@@ -156,6 +278,9 @@ class _DuesScreenState extends ConsumerState<DuesScreen> {
       body: RefreshIndicator(
         onRefresh: () async {
           await ref.read(duesControllerProvider.notifier).loadDues();
+          await ref
+              .read(recurringDuesControllerProvider.notifier)
+              .triggerGeneration();
         },
         color: AppColors.primary,
         child: ListView(
@@ -164,7 +289,9 @@ class _DuesScreenState extends ConsumerState<DuesScreen> {
             // Search Bar
             SearchField(
               controller: _searchController,
-              hintText: 'Search dues by client or description...',
+              hintText: isRecurringTab
+                  ? 'Search recurring schedules...'
+                  : 'Search dues by client or description...',
               onChanged: (_) => setState(() {}),
               onClear: () => setState(() {}),
             ),
@@ -206,13 +333,17 @@ class _DuesScreenState extends ConsumerState<DuesScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '${filteredDues.length} Records',
+                  isRecurringTab
+                      ? '${filteredSchedules.length} Schedules'
+                      : '${filteredDues.length} Records',
                   style: AppTypography.bodySmall.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 Text(
-                  'Total: ${CurrencyFormatter.format(totalFiltered)}',
+                  isRecurringTab
+                      ? 'Total: ${CurrencyFormatter.format(totalRecurring)}/cycle'
+                      : 'Total: ${CurrencyFormatter.format(totalFiltered)}',
                   style: AppTypography.labelLarge.copyWith(
                     color: AppColors.primary,
                     fontWeight: FontWeight.w700,
@@ -222,41 +353,82 @@ class _DuesScreenState extends ConsumerState<DuesScreen> {
             ),
             const SizedBox(height: 12),
 
-            // Loading state
-            if (duesState.isLoading && duesState.dues.isEmpty)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 60),
-                  child: CircularProgressIndicator(color: AppColors.primary),
-                ),
-              )
-            // Dues List / Empty State
-            else if (filteredDues.isEmpty)
-              EmptyState(
-                icon: Icons.receipt_long,
-                title: emptyTitle(),
-                description: emptyDescription(),
-                actionText:
-                    duesState.duesFilter == 'Paid' ? null : '+ Create Due',
-                onAction: duesState.duesFilter == 'Paid'
-                    ? null
-                    : () => context.push(RouteNames.addDue),
-              )
-            else
-              ...filteredDues.map(
-                (due) {
-                  final resolvedCustomerName =
-                      customerMap[due.customerId] ?? due.customerName;
+            // Recurring Tab Content
+            if (isRecurringTab) ...[
+              if (recurringState.isLoading && recurringState.schedules.isEmpty)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 60),
+                    child: CircularProgressIndicator(color: AppColors.primary),
+                  ),
+                )
+              else if (filteredSchedules.isEmpty)
+                EmptyState(
+                  icon: Icons.repeat,
+                  title: emptyTitle(),
+                  description: emptyDescription(),
+                  actionText: '+ Create Recurring Due',
+                  onAction: () => context.push(RouteNames.addDue),
+                )
+              else
+                ...filteredSchedules.map((schedule) {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 10),
-                    child: DueCard(
-                      due: due,
-                      customerName: resolvedCustomerName,
-                      onTap: () => context.push('/due/${due.id}'),
+                    child: RecurringScheduleCard(
+                      schedule: schedule,
+                      onPause: () => ref
+                          .read(recurringDuesControllerProvider.notifier)
+                          .pauseSchedule(schedule.id),
+                      onResume: () => ref
+                          .read(recurringDuesControllerProvider.notifier)
+                          .resumeSchedule(schedule.id),
+                      onStop: () => ref
+                          .read(recurringDuesControllerProvider.notifier)
+                          .stopSchedule(schedule.id),
+                      onDelete: () => ref
+                          .read(recurringDuesControllerProvider.notifier)
+                          .deleteSchedule(schedule.id),
+                      onEdit: () => _showEditScheduleDialog(context, schedule),
                     ),
                   );
-                },
-              ),
+                }),
+            ]
+            // Standard Dues Content
+            else ...[
+              if (duesState.isLoading && duesState.dues.isEmpty)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 60),
+                    child: CircularProgressIndicator(color: AppColors.primary),
+                  ),
+                )
+              else if (filteredDues.isEmpty)
+                EmptyState(
+                  icon: Icons.receipt_long,
+                  title: emptyTitle(),
+                  description: emptyDescription(),
+                  actionText:
+                      duesState.duesFilter == 'Paid' ? null : '+ Create Due',
+                  onAction: duesState.duesFilter == 'Paid'
+                      ? null
+                      : () => context.push(RouteNames.addDue),
+                )
+              else
+                ...filteredDues.map(
+                  (due) {
+                    final resolvedCustomerName =
+                        customerMap[due.customerId] ?? due.customerName;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: DueCard(
+                        due: due,
+                        customerName: resolvedCustomerName,
+                        onTap: () => context.push('/due/${due.id}'),
+                      ),
+                    );
+                  },
+                ),
+            ],
 
             const SizedBox(height: 90),
           ],

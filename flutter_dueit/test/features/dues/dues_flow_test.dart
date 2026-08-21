@@ -8,6 +8,8 @@ import 'package:dueit/features/customers/domain/entities/customer_entity.dart';
 import 'package:dueit/features/customers/presentation/controllers/customer_controller.dart';
 import 'package:dueit/features/dues/domain/entities/due_entity.dart';
 import 'package:dueit/features/dues/domain/entities/payment_record_entity.dart';
+import 'package:dueit/features/dues/domain/entities/recurring_due_schedule_entity.dart';
+import 'package:dueit/features/dues/domain/repositories/recurring_due_repository.dart';
 import 'package:dueit/features/dues/presentation/controllers/dues_controller.dart';
 import 'package:dueit/features/dues/presentation/screens/add_due_screen.dart';
 import 'package:dueit/features/dues/presentation/screens/dues_screen.dart';
@@ -17,12 +19,14 @@ import '../../mocks/fake_auth_repository.dart';
 import '../../mocks/fake_customer_repository.dart';
 import '../../mocks/fake_dues_repository.dart';
 import '../../mocks/fake_notification_service.dart';
+import '../../mocks/fake_recurring_due_repository.dart';
 
 void main() {
-  group('Dues UI Flow & Widget Tests with Payments', () {
+  group('Dues UI Flow & Widget Tests with Payments & Recurring', () {
     late FakeAuthRepository fakeAuthRepo;
     late FakeCustomerRepository fakeCustomerRepo;
     late FakeDuesRepository fakeDuesRepo;
+    late FakeRecurringDueRepository fakeRecurringRepo;
     late FakeNotificationService fakeNotificationService;
 
     final todayStr = DateFormatter.todayIsoDate();
@@ -85,6 +89,28 @@ void main() {
           ),
         ],
       );
+
+      fakeRecurringRepo = FakeRecurringDueRepository(
+        ownerId: 'owner_1',
+        initialSchedules: [
+          RecurringDueScheduleEntity(
+            id: 'rec_1',
+            ownerId: 'owner_1',
+            customerId: 'c1',
+            customerName: 'Rahul Kumar',
+            amount: 1500.0,
+            description: 'Monthly Karate Coaching',
+            frequency: RecurrenceFrequency.monthly,
+            dayOfMonth: 25,
+            startDate: '2026-08-25',
+            nextDueDate: '2026-09-25',
+            status: RecurringScheduleStatus.active,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        ],
+      );
+
       fakeNotificationService = FakeNotificationService();
     });
 
@@ -92,6 +118,7 @@ void main() {
       fakeAuthRepo.dispose();
       fakeCustomerRepo.dispose();
       fakeDuesRepo.dispose();
+      fakeRecurringRepo.dispose();
     });
 
     testWidgets('1. DuesScreen displays dues list and filter tabs',
@@ -102,6 +129,7 @@ void main() {
             authRepositoryProvider.overrideWithValue(fakeAuthRepo),
             customerRepositoryProvider.overrideWithValue(fakeCustomerRepo),
             duesRepositoryProvider.overrideWithValue(fakeDuesRepo),
+            recurringDueRepositoryProvider.overrideWithValue(fakeRecurringRepo),
             notificationServiceProvider
                 .overrideWithValue(fakeNotificationService),
           ],
@@ -125,6 +153,15 @@ void main() {
 
       expect(find.text('August Karate Fee'), findsOneWidget);
       expect(find.text('Monthly Membership'), findsNothing);
+
+      // Tap Recurring filter
+      final recurringFilter = find.widgetWithText(ChoiceChip, 'Recurring');
+      expect(recurringFilter, findsOneWidget);
+      await tester.tap(recurringFilter);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Monthly Karate Coaching'), findsOneWidget);
+      expect(find.text('1 Schedules'), findsOneWidget);
     });
 
     testWidgets('2. AddDueScreen shows customer dropdown and creates due',
@@ -135,6 +172,7 @@ void main() {
             authRepositoryProvider.overrideWithValue(fakeAuthRepo),
             customerRepositoryProvider.overrideWithValue(fakeCustomerRepo),
             duesRepositoryProvider.overrideWithValue(fakeDuesRepo),
+            recurringDueRepositoryProvider.overrideWithValue(fakeRecurringRepo),
             notificationServiceProvider
                 .overrideWithValue(fakeNotificationService),
           ],
@@ -164,6 +202,7 @@ void main() {
             authRepositoryProvider.overrideWithValue(fakeAuthRepo),
             customerRepositoryProvider.overrideWithValue(fakeCustomerRepo),
             duesRepositoryProvider.overrideWithValue(fakeDuesRepo),
+            recurringDueRepositoryProvider.overrideWithValue(fakeRecurringRepo),
             notificationServiceProvider
                 .overrideWithValue(fakeNotificationService),
           ],
@@ -233,6 +272,7 @@ void main() {
             authRepositoryProvider.overrideWithValue(fakeAuthRepo),
             customerRepositoryProvider.overrideWithValue(fakeCustomerRepo),
             duesRepositoryProvider.overrideWithValue(fakeDuesRepo),
+            recurringDueRepositoryProvider.overrideWithValue(fakeRecurringRepo),
             notificationServiceProvider
                 .overrideWithValue(fakeNotificationService),
           ],

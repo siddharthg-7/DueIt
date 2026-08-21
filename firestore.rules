@@ -22,9 +22,11 @@ service cloud.firestore {
       match /customers/{customerId} {
         allow read: if isOwner(userId);
         allow create: if isOwner(userId)
-          && (!('ownerId' in request.resource.data) || request.resource.data.ownerId == userId);
+          && request.resource.data.ownerId == userId
+          && (!('businessId' in request.resource.data) || request.resource.data.businessId == userId);
         allow update: if isOwner(userId)
-          && (!('ownerId' in request.resource.data) || request.resource.data.ownerId == resource.data.ownerId || request.resource.data.ownerId == userId);
+          && request.resource.data.ownerId == resource.data.ownerId
+          && (!('businessId' in request.resource.data) || request.resource.data.businessId == resource.data.businessId);
         allow delete: if isOwner(userId);
       }
 
@@ -32,9 +34,11 @@ service cloud.firestore {
       match /dues/{dueId} {
         allow read: if isOwner(userId);
         allow create: if isOwner(userId)
-          && (!('ownerId' in request.resource.data) || request.resource.data.ownerId == userId);
+          && request.resource.data.ownerId == userId
+          && (!('businessId' in request.resource.data) || request.resource.data.businessId == userId);
         allow update: if isOwner(userId)
-          && (!('ownerId' in request.resource.data) || request.resource.data.ownerId == resource.data.ownerId || request.resource.data.ownerId == userId);
+          && request.resource.data.ownerId == resource.data.ownerId
+          && (!('businessId' in request.resource.data) || request.resource.data.businessId == resource.data.businessId);
         allow delete: if isOwner(userId);
       }
 
@@ -42,9 +46,23 @@ service cloud.firestore {
       match /payments/{paymentId} {
         allow read: if isOwner(userId);
         allow create: if isOwner(userId)
-          && (!('ownerId' in request.resource.data) || request.resource.data.ownerId == userId);
+          && request.resource.data.ownerId == userId
+          && (!('businessId' in request.resource.data) || request.resource.data.businessId == userId);
         allow update: if isOwner(userId)
-          && (!('ownerId' in request.resource.data) || request.resource.data.ownerId == resource.data.ownerId || request.resource.data.ownerId == userId);
+          && request.resource.data.ownerId == resource.data.ownerId
+          && (!('businessId' in request.resource.data) || request.resource.data.businessId == resource.data.businessId);
+        allow delete: if isOwner(userId);
+      }
+
+      // Recurring Due Schedules Subcollection (Strictly isolated to authenticated business owner)
+      match /recurring_due_schedules/{scheduleId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && request.resource.data.ownerId == userId
+          && (!('businessId' in request.resource.data) || request.resource.data.businessId == userId);
+        allow update: if isOwner(userId)
+          && request.resource.data.ownerId == resource.data.ownerId
+          && (!('businessId' in request.resource.data) || request.resource.data.businessId == resource.data.businessId);
         allow delete: if isOwner(userId);
       }
     }

@@ -16,6 +16,7 @@ import 'package:dueit/features/dues/presentation/screens/add_due_screen.dart';
 import 'package:dueit/features/insights/presentation/screens/insights_screen.dart';
 import 'package:dueit/features/reminders/presentation/screens/notifications_screen.dart';
 import 'package:dueit/features/settings/presentation/screens/settings_screen.dart';
+import 'package:dueit/shared/widgets/connectivity_banner.dart';
 import 'route_names.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -125,7 +126,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
           return Scaffold(
-            body: navigationShell,
+            body: Column(
+              children: [
+                const ConnectivityBanner(),
+                Expanded(child: navigationShell),
+              ],
+            ),
             bottomNavigationBar: AppBottomNavBar(
               currentIndex: navigationShell.currentIndex,
               onIndexChanged: (index) {

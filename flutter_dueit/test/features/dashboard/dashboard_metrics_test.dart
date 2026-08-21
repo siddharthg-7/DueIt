@@ -13,7 +13,7 @@ import '../../mocks/fake_dues_repository.dart';
 import '../../mocks/fake_notification_service.dart';
 
 void main() {
-  group('DashboardMetrics Financial Invariant Tests with Payments', () {
+  group('DashboardMetrics Reactive Provider & Financial Integration Tests', () {
     late FakeAuthRepository fakeAuthRepo;
     late FakeDuesRepository fakeDuesRepo;
     late ProviderContainer container;
@@ -41,6 +41,7 @@ void main() {
             id: 'due_today_1',
             ownerId: 'owner_1',
             customerId: 'cust_1',
+            customerName: 'Rahul Kumar',
             amount: 1500.0,
             description: 'Today Due 1',
             dueDate: todayStr,
@@ -51,17 +52,21 @@ void main() {
             id: 'due_today_2',
             ownerId: 'owner_1',
             customerId: 'cust_2',
+            customerName: 'Arjun Sharma',
             amount: 2000.0,
+            paidAmount: 500.0,
             description: 'Today Due 2',
             dueDate: todayStr,
-            status: DueStatus.due,
+            status: DueStatus.partiallyPaid,
           ),
           // Overdue: ₹5,000 (partially paid ₹2,000, remaining ₹3,000)
           DueEntity(
             id: 'due_overdue',
             ownerId: 'owner_1',
             customerId: 'cust_3',
+            customerName: 'Sneha Reddy',
             amount: 5000.0,
+            paidAmount: 2000.0,
             description: 'Overdue Due',
             dueDate: yesterdayStr,
             status: DueStatus.overdue,
@@ -71,6 +76,7 @@ void main() {
             id: 'due_upcoming',
             ownerId: 'owner_1',
             customerId: 'cust_4',
+            customerName: 'Vikram Singh',
             amount: 1800.0,
             description: 'Upcoming Due',
             dueDate: tomorrowStr,
@@ -81,6 +87,7 @@ void main() {
           // Partial payment on due_today_2: ₹500
           PaymentRecordEntity(
             id: 'p1',
+            ownerId: 'owner_1',
             dueId: 'due_today_2',
             customerId: 'cust_2',
             amount: 500.0,
@@ -90,6 +97,7 @@ void main() {
           // Partial payment on due_overdue: ₹2,000 (paid today)
           PaymentRecordEntity(
             id: 'p2',
+            ownerId: 'owner_1',
             dueId: 'due_overdue',
             customerId: 'cust_3',
             amount: 2000.0,
@@ -127,14 +135,15 @@ void main() {
       final metrics = container.read(dashboardMetricsProvider);
 
       // Today Due 1: 1500 remaining + Today Due 2: 1500 remaining = 3000
-      expect(metrics.todayTotal, 3000.0);
+      expect(metrics.toCollectToday, 3000.0);
+      expect(metrics.todayDuesCount, 2);
     });
 
     test('2. Collected Today correctly sums all payments recorded today', () {
       final metrics = container.read(dashboardMetricsProvider);
 
       // p1 (500) + p2 (2000) = 2500
-      expect(metrics.todayCollectedTotal, 2500.0);
+      expect(metrics.collectedToday, 2500.0);
     });
 
     test(
@@ -144,12 +153,33 @@ void main() {
 
       // Total ₹5,000 - Paid ₹2,000 = ₹3,000
       expect(metrics.overdueTotal, 3000.0);
-      expect(metrics.overdueDues.length, 1);
+      expect(metrics.overdueDuesCount, 1);
       expect(metrics.overdueDues.first.remainingAmount, 3000.0);
     });
 
+    test('4. Upcoming total reflects within 30-day horizon', () {
+      final metrics = container.read(dashboardMetricsProvider);
+
+      expect(metrics.upcomingTotal, 1800.0);
+      expect(metrics.upcomingDuesCount, 1);
+    });
+
     test(
-        '4. Recording payment on today due dynamically updates remaining today and collected today',
+        '5. Needs attention items generated from active overdue and today dues',
+        () {
+      final metrics = container.read(dashboardMetricsProvider);
+
+      expect(metrics.attentionItems.length, 3);
+      expect(metrics.attentionItems.any((i) => i.id == 'attention_overdue'),
+          isTrue);
+      expect(
+          metrics.attentionItems.any((i) => i.id == 'attention_today'), isTrue);
+      expect(metrics.attentionItems.any((i) => i.id == 'attention_upcoming'),
+          isTrue);
+    });
+
+    test(
+        '6. Recording payment on today due dynamically updates remaining today and collected today',
         () async {
       final ctrl = container.read(duesControllerProvider.notifier);
 
@@ -162,9 +192,9 @@ void main() {
 
       final metrics = container.read(dashboardMetricsProvider);
       // Today remaining was 3000 - 1500 = 1500
-      expect(metrics.todayTotal, 1500.0);
+      expect(metrics.toCollectToday, 1500.0);
       // Collected today was 2500 + 1500 = 4000
-      expect(metrics.todayCollectedTotal, 4000.0);
+      expect(metrics.collectedToday, 4000.0);
     });
   });
 }

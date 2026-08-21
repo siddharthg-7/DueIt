@@ -6,22 +6,24 @@ import 'package:dueit/core/utils/currency_formatter.dart';
 class CollectionSummary extends StatelessWidget {
   final double expectedTotal;
   final double collectedTotal;
-  final double pendingTotal;
+  final double outstandingTotal;
+  final double? collectionRate;
   final String periodTitle;
 
   const CollectionSummary({
     super.key,
     required this.expectedTotal,
     required this.collectedTotal,
-    required this.pendingTotal,
-    this.periodTitle = 'This Month\'s Summary',
+    required this.outstandingTotal,
+    this.collectionRate,
+    this.periodTitle = 'Monthly Collection Planning',
   });
 
   @override
   Widget build(BuildContext context) {
-    final double rate = expectedTotal > 0
-        ? ((collectedTotal / expectedTotal) * 100).clamp(0, 100)
-        : 0;
+    final hasData = collectionRate != null;
+    final ratePercentage =
+        hasData ? (collectionRate! * 100).clamp(0, 100).round() : null;
 
     return Card(
       color: AppColors.surfaceContainerLowest,
@@ -40,27 +42,51 @@ class CollectionSummary extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
-                  child: Text(
-                    periodTitle,
-                    style: AppTypography.titleMedium.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color:
+                              AppColors.primaryContainer.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.calendar_month,
+                          size: 18,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        periodTitle,
+                        style: AppTypography.titleMedium.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.primaryContainer.withValues(alpha: 0.2),
+                    color: hasData
+                        ? AppColors.primaryContainer.withValues(alpha: 0.2)
+                        : AppColors.surfaceContainerHigh,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    '${rate.round()}% Collected',
+                    hasData
+                        ? '$ratePercentage% Collected'
+                        : 'No collection data yet',
                     style: AppTypography.labelSmall.copyWith(
-                      color: AppColors.primary,
+                      color: hasData
+                          ? AppColors.primary
+                          : AppColors.onSurfaceVariant,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -69,46 +95,48 @@ class CollectionSummary extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
-            // Expected Total
+            // Expected Total (Current month original dues)
             _buildStatRow(
               color: AppColors.outlineVariant,
-              label: 'Expected Total',
+              label: 'Expected Collections',
               amount: expectedTotal,
+              subtitle: 'Original amount of current-month dues',
             ),
             const Divider(
                 height: 16, thickness: 0.6, color: AppColors.surfaceVariant),
 
-            // Collected Total
+            // Collected Total (Payments recorded in current month)
             _buildStatRow(
               color: AppColors.primary,
-              label: 'Collected',
+              label: 'Actual Collected',
               amount: collectedTotal,
+              subtitle: 'Payments recorded this month',
               isHighlighted: true,
             ),
             const Divider(
                 height: 16, thickness: 0.6, color: AppColors.surfaceVariant),
 
-            // Pending & Overdue
+            // Outstanding Balance (Remaining current-month dues)
             _buildStatRow(
               color: AppColors.tertiary,
-              label: 'Pending & Overdue',
-              amount: pendingTotal,
+              label: 'Current Month Outstanding',
+              amount: outstandingTotal,
+              subtitle: 'Remaining unpaid for this month',
             ),
             const SizedBox(height: 16),
 
             // Progress Bar
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: SizedBox(
-                height: 8,
+            if (hasData)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
                 child: LinearProgressIndicator(
-                  value: rate / 100,
-                  backgroundColor: AppColors.surfaceVariant,
+                  value: collectionRate,
+                  backgroundColor: AppColors.surfaceContainerHigh,
                   valueColor:
                       const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                  minHeight: 8,
                 ),
               ),
-            ),
           ],
         ),
       ),
@@ -119,40 +147,49 @@ class CollectionSummary extends StatelessWidget {
     required Color color,
     required String label,
     required double amount,
+    String? subtitle,
     bool isHighlighted = false,
   }) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 10),
         Expanded(
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: color,
-                  shape: BoxShape.circle,
+              Text(
+                label,
+                style: AppTypography.bodySmall.copyWith(
+                  fontWeight: isHighlighted ? FontWeight.w700 : FontWeight.w500,
+                  color: isHighlighted
+                      ? AppColors.onSurface
+                      : AppColors.onSurfaceVariant,
                 ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  label,
-                  style: AppTypography.bodyMedium,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+              if (subtitle != null)
+                Text(
+                  subtitle,
+                  style: AppTypography.labelSmall.copyWith(
+                    fontSize: 10,
+                    color: AppColors.onSurfaceVariant.withValues(alpha: 0.7),
+                  ),
                 ),
-              ),
             ],
           ),
         ),
-        const SizedBox(width: 12),
         Text(
           CurrencyFormatter.format(amount),
-          style: AppTypography.labelLarge.copyWith(
+          style: AppTypography.titleMedium.copyWith(
+            fontWeight: isHighlighted ? FontWeight.w800 : FontWeight.w600,
             color: isHighlighted ? AppColors.primary : AppColors.onSurface,
-            fontWeight: isHighlighted ? FontWeight.w700 : FontWeight.w600,
           ),
         ),
       ],

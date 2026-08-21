@@ -1,17 +1,19 @@
-# dueit
+# DueIt — Mobile Application
 
-A new Flutter project.
+For comprehensive project documentation, architectural specifications, data schemas, and setup instructions, refer to the root [README.md](file:///c:/project-self-1/dueit/README.md).
 
-## Getting Started
+## Quick Start
 
-This project is a starting point for a Flutter application.
+```bash
+# Install dependencies
+flutter pub get
 
-A few resources to get you started if this is your first Flutter project:
+# Run static analysis
+flutter analyze
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+# Execute test suite
+flutter test
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+# Run application on connected device / emulator
+flutter run
+```

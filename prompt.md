@@ -1,770 +1,697 @@
-We are now starting STEP 8 of the DueIt production implementation.
+We are now starting STEP 12 of the DueIt production implementation.
 
-STEP 7 — Payments & Collection — is complete and verified.
+This is NOT a feature-development step.
 
-Current verified state:
+This is a:
 
-- Authentication works
-- Business setup works
-- Customer management works
-- Firestore ownership/security works
-- Due engine works
-- Due status calculation works
-- Payment recording works
-- Partial payments work
-- Full payments work
-- Payment history works
-- Customer financial summary works
-- Dashboard financial calculations work
-- 75 automated tests pass
+PRODUCTION QA + SECURITY + DATA INTEGRITY AUDIT
+
+The objective is to verify that the existing DueIt implementation behaves correctly as a complete application before we add major new features.
+
+==================================================
+CURRENT VERIFIED STATE
+==================================================
+
+DueIt currently includes:
+
+- Firebase Authentication
+- Business setup
+- Customer management
+- Due management
+- Due status calculation
+- Partial payments
+- Full payments
+- Payment history
+- Local reminders
+- Android notifications
+- Recurring dues
+- Monthly / quarterly / yearly recurrence
+- Weekly recurrence
+- Financial planning dashboard
+- Collection trends
+- Needs Attention
+- Firestore offline persistence
+- Connectivity UX
+- 148 automated tests
 - flutter analyze = 0 issues
 - Debug APK builds successfully
 
-Now implement:
+Do NOT add new product features during this step.
 
-REMINDERS & LOCAL NOTIFICATIONS
+Do NOT add:
 
-This is one of DueIt's core product features.
+- AI
+- WhatsApp
+- SMS
+- Email
+- Payment gateway
+- UPI integration
+- Expenses
+- Accounting
+- New navigation
+- New database
 
 ==================================================
-CORE PURPOSE
+PART 1 — FULL END-TO-END USER FLOW
 ==================================================
 
-DueIt exists partly to prevent business owners from forgetting to collect money.
+Perform a complete audit of the main business flow:
 
-A Due should be able to generate a reminder notification before or on its due date.
+New user
+→ Sign up
+→ Business setup
+→ Dashboard
+→ Add Customer
+→ Add Due
+→ Configure Reminder
+→ Save
+→ Due appears
+→ Reminder scheduled
+→ Record partial payment
+→ Remaining amount updates
+→ Record final payment
+→ Due becomes PAID
+→ Reminder cancelled
+→ Dashboard updates
 
-Core flow:
+Verify there are no broken transitions.
 
+Verify no screen displays mock/static financial values.
+
+All financial values must originate from real application state.
+
+==================================================
+PART 2 — AUTHENTICATION
+==================================================
+
+Audit:
+
+Sign up
+Login
+Logout
+Session persistence
+Invalid credentials
+Empty fields
+Validation
+Loading states
+Permission errors
+Network errors
+
+Verify:
+
+Unauthenticated user cannot access protected business data.
+
+After logout:
+
+Customer state
+Due state
+Payment state
+Recurring schedule state
+
+must not leak into another authenticated session.
+
+Test:
+
+User A login
+→ data visible
+
+Logout
+
+User B login
+→ only User B data visible
+
+==================================================
+PART 3 — MULTI-TENANT SECURITY
+==================================================
+
+This is CRITICAL.
+
+Audit Firestore rules for:
+
+users/{uid}/customers
+users/{uid}/dues
+users/{uid}/payments
+users/{uid}/recurring_due_schedules
+
+Verify:
+
+User A:
+
+READ own data → ALLOW
+CREATE own data → ALLOW
+UPDATE own data → ALLOW
+DELETE own data → ALLOW
+
+User A:
+
+READ User B data → DENY
+CREATE under User B → DENY
+UPDATE User B → DENY
+DELETE User B → DENY
+
+Verify:
+
+ownerId cannot be changed.
+
+businessId cannot be changed.
+
+Unauthenticated requests are denied.
+
+Do not use recursive wildcards.
+
+==================================================
+PART 4 — DATA INTEGRITY
+==================================================
+
+Audit relationships:
+
+Customer
 Due
-→ Reminder configuration
-→ Notification scheduled
-→ Notification appears
-→ User taps notification
-→ DueIt opens
-→ Due Details
+Payment
+RecurringSchedule
+
+Verify:
+
+Every Due references a valid customer belonging to the same owner.
+
+Every Payment references a valid Due belonging to the same owner.
+
+Every Payment references the correct customer.
+
+Every generated Due references the correct recurring schedule.
+
+A user must not be able to create:
+
+User A Due
+→ User B Customer
+
+or:
+
+User A Payment
+→ User B Due
 
 ==================================================
-IMPORTANT
+PART 5 — PAYMENT INTEGRITY
 ==================================================
 
-Use LOCAL DEVICE NOTIFICATIONS for this step.
+Audit:
 
-Do NOT implement Firebase Cloud Messaging yet.
+Full payment
+Partial payment
+Multiple payments
+Payment deletion
+Remaining balance
+Paid status
+Partially paid status
 
-Do NOT implement a backend notification scheduler.
+Test:
 
-Do NOT implement WhatsApp.
+Due = ₹5,000
 
-Do NOT implement email reminders.
+Payment = ₹2,000
 
-Do NOT implement SMS.
+Remaining = ₹3,000
 
-Do NOT implement AI reminders.
+Payment = ₹3,000
 
-Those are future features.
+Remaining = ₹0
 
-==================================================
-PACKAGE
-==================================================
+Status = PAID
 
-Inspect the current Flutter project and add/use:
+Attempt:
 
-flutter_local_notifications
+Payment = ₹1
 
-Use the current compatible version appropriate for the project's Flutter/Dart version.
+after fully paid
 
-Do not blindly copy old API examples.
+Must be rejected.
 
-Verify the current package API from its documentation/changelog if needed.
+Attempt:
 
-==================================================
-PLATFORM
-==================================================
+Payment > remaining
 
-The primary target is Android.
+Must be rejected.
 
-Implement Android notification support properly.
+Attempt:
 
-If the project has iOS configuration already, structure the notification service so iOS can be added cleanly later, but do not let iOS-specific work derail the Android MVP.
+Payment = 0
 
-==================================================
-NOTIFICATION SERVICE
-==================================================
+Must be rejected.
 
-Create a centralized notification service.
+Attempt:
 
-Example responsibility:
+Negative payment
 
-LocalNotificationService
-
-It should handle:
-
-initialize()
-requestPermissions()
-scheduleReminder()
-cancelReminder()
-cancelRemindersForDue()
-cancelAllDueReminders()
-getPendingNotifications()
-
-Do not put notification scheduling directly inside Due widgets.
+Must be rejected.
 
 ==================================================
-NOTIFICATION CHANNEL
+PART 6 — DUE STATUS
 ==================================================
 
-Create an appropriate Android notification channel for DueIt reminders.
+Verify centralized status calculation:
 
-Example conceptual channel:
+CANCELLED
+PAID
+PARTIALLY_PAID
+OVERDUE
+DUE
+UPCOMING
 
-Payment Reminders
+Priority:
 
-Use an appropriate importance level.
+CANCELLED
+↓
+PAID
+↓
+PARTIALLY_PAID
+↓
+date-based status
 
-Do not make notifications unnecessarily aggressive.
-
-The purpose is helpful reminders, not alarm behavior.
-
-==================================================
-PERMISSIONS
-==================================================
-
-Handle Android notification permission correctly for supported Android versions.
-
-Do not assume notification permission is automatically granted.
-
-Ask for permission at an appropriate point.
-
-Do not immediately show a permission prompt before the user understands why notifications are useful.
-
-Prefer:
-
-User creates their first reminder
-→ explain reminder benefit
-→ request notification permission
-
-If permission is denied:
-
-The Due should still be saved.
-
-Show a useful message explaining that reminders are disabled until notification permission is enabled.
-
-Do not break the Due creation workflow because notification permission was denied.
+Test date boundaries carefully.
 
 ==================================================
-REMINDER MODEL
+PART 7 — DASHBOARD FINANCIAL INTEGRITY
 ==================================================
 
-Create a proper reminder configuration model if the current Due architecture does not already contain one.
+Verify:
 
-A Due should conceptually support:
+To Collect Today
+Collected Today
+Remaining Today
+Overdue
+Upcoming
+Monthly Expected
+Monthly Collected
+Monthly Outstanding
+Collection Rate
+Collection Trend
 
-reminderEnabled
-reminderType
-reminderTime
-
-Reminder types:
-
-NONE
-ON_DUE_DATE
-ONE_DAY_BEFORE
-THREE_DAYS_BEFORE
-SEVEN_DAYS_BEFORE
-CUSTOM
-
-If the current UI/design supports additional options, preserve them.
-
-Do not create unnecessary complexity.
-
-==================================================
-REMINDER DATE CALCULATION
-==================================================
-
-Centralize reminder date calculation.
-
-Examples:
-
-Due:
-Aug 25
-
-One day before:
-Aug 24
-
-Three days before:
-Aug 22
-
-Seven days before:
-Aug 18
-
-Do not scatter this calculation across widgets.
-
-Use the existing DueIt date-only utilities.
-
-==================================================
-TIME OF DAY
-==================================================
-
-A reminder needs a notification time.
-
-Use a sensible default according to the existing Stitch design.
-
-If the UI already specifies a reminder time, preserve it.
-
-If not, use a reasonable configurable default such as:
-
-9:00 AM local time.
-
-Do not hardcode the notification time in multiple places.
-
-Create a centralized default.
-
-Allow future customization.
-
-==================================================
-SCHEDULE RULE
-==================================================
-
-Before scheduling:
-
-Determine:
-
-reminderDateTime
-
-If reminder time is already in the past:
-
-Do NOT schedule a notification in the past.
-
-Handle this gracefully.
-
-For example:
-
-Due today
-Reminder = on due date
-Current time = 3 PM
-Default reminder time = 9 AM
-
-Do not schedule a notification for 9 AM today.
-
-Instead:
-
-Either skip the reminder
-
-or, if the existing UX explicitly supports it, schedule an appropriate next valid reminder.
-
-Do not unexpectedly fire an old reminder immediately.
-
-==================================================
-DUE CREATION
-==================================================
-
-When a Due is created with a reminder:
-
-1. Save the Due.
-2. Determine reminder datetime.
-3. Schedule local notification.
-4. Store enough reminder metadata to manage the notification later.
-
-Do not schedule the notification before the Due has successfully been saved.
-
-If scheduling fails:
-
-The Due should remain saved.
-
-Show a warning that the reminder could not be scheduled.
-
-Do not roll back a valid Due simply because the local notification failed.
-
-==================================================
-NOTIFICATION ID
-==================================================
-
-Create a deterministic notification ID for each Due/reminder.
-
-Do not rely on random IDs that cannot later be found.
-
-The ID should allow:
-
-schedule
-cancel
-reschedule
-
-for the specific Due.
-
-If one Due eventually supports multiple reminders, structure the ID generation so this can be extended.
-
-==================================================
-EDIT DUE
-==================================================
-
-This is extremely important.
-
-If any reminder-related field changes:
-
-Cancel the existing notification.
-
-Then calculate the new reminder.
-
-Then schedule the new notification.
+Use real test data.
 
 Example:
 
-Original:
+Today:
 
-Due Aug 25
-Reminder Aug 24
+Due A = ₹5,000
+Payment = ₹2,000
 
-Edit:
+Yesterday:
 
-Due Aug 28
-Reminder one day before
+Due B = ₹4,000
+Payment = ₹1,000
 
-Result:
+Tomorrow:
 
-Old Aug 24 notification must be cancelled.
+Due C = ₹3,000
 
-New Aug 27 notification must be scheduled.
+Expected:
+
+To Collect Today = ₹3,000
+
+Collected Today = ₹2,000
+
+Overdue = ₹3,000
+
+Upcoming = ₹3,000
+
+Verify no double counting.
+
+==================================================
+PART 8 — RECURRING DUE INTEGRITY
+==================================================
+
+Audit:
+
+Monthly
+Quarterly
+Yearly
+Weekly
+
+Verify:
+
+No duplicate occurrences.
+
+Occurrence IDs remain deterministic.
+
+Historical dues never change when schedule configuration changes.
+
+Example:
+
+August = ₹1,500
+
+Edit recurring schedule:
+
+₹1,500 → ₹2,000
+
+August remains:
+
+₹1,500
+
+Future occurrences:
+
+₹2,000
+
+Verify:
+
+Pause
+Resume
+Stop
+
+behave correctly.
+
+Verify maximum catch-up limit.
+
+==================================================
+PART 9 — REMINDER INTEGRITY
+==================================================
+
+Audit:
+
+Reminder creation
+Reminder editing
+Reminder cancellation
+Paid cancellation
+Cancelled Due cancellation
+Partial payment
+Notification tap
+
+Verify:
+
+Paid Due has no pending reminder.
+
+Cancelled Due has no pending reminder.
+
+Editing Due date cancels old reminder and creates new reminder.
+
+Changing reminder option does the same.
 
 Do not leave stale notifications.
 
 ==================================================
-STATUS CHANGES
+PART 10 — ANDROID NOTIFICATION AUDIT
 ==================================================
 
-When a Due becomes:
+Inspect:
 
-PAID
+AndroidManifest.xml
 
-Cancel any pending reminders.
+Verify required permissions and receivers.
 
-When a Due becomes:
+Verify:
 
-CANCELLED
+POST_NOTIFICATIONS
 
-Cancel any pending reminders.
+SCHEDULE_EXACT_ALARM / USE_EXACT_ALARM
 
-When a Due becomes:
+and other permissions are actually required by the implementation.
 
-PARTIALLY_PAID
+Do not retain unnecessary permissions.
 
-Keep the reminder active for the remaining balance unless the existing product requirements explicitly say otherwise.
+Verify notification channel configuration.
 
-The owner still needs to collect the remaining amount.
+Verify notification IDs are deterministic and stable.
 
-==================================================
-PAYMENT INTERACTION
-==================================================
-
-If:
-
-Due = ₹5,000
-Paid = ₹2,000
-Remaining = ₹3,000
-
-Reminder should communicate the remaining amount where appropriate.
-
-Example:
-
-"₹3,000 remaining from Rahul Kumar."
-
-Do not show the original ₹5,000 as still fully outstanding.
-
-For PAID:
-
-No future reminder should remain scheduled.
+Verify notification tap routing.
 
 ==================================================
-NOTIFICATION CONTENT
+PART 11 — OFFLINE AUDIT
 ==================================================
 
-Notification title examples:
+Verify the existing Firestore offline architecture.
 
-"Payment due today"
-"Payment due tomorrow"
-"Payment overdue"
+Test:
 
-Notification body should include:
+Offline:
 
-Customer name
-Remaining amount
-Description
-
-Example:
-
-Payment due tomorrow
-
-Rahul Kumar owes ₹1,500 for August Karate Fee.
-
-Keep notifications concise.
-
-Do not expose unnecessary private information.
-
-==================================================
-OVERDUE NOTIFICATIONS
-==================================================
-
-Do not implement continuous daily overdue notifications yet.
-
-For this step, only schedule the configured reminder.
-
-The existing Overdue screen can continue to show overdue payments.
-
-Future versions may support recurring overdue reminders.
-
-==================================================
-NOTIFICATION TAP
-==================================================
-
-When the user taps a DueIt notification:
-
-Open the application.
-
-Navigate to the relevant:
-
-/due/:id
-
-Use the existing GoRouter architecture.
-
-If the Due no longer exists:
-
-Open DueIt safely without crashing.
-
-If the Due is already PAID:
-
-Open the Due Details screen showing PAID status.
-
-Do not open a broken route.
-
-==================================================
-APP STATE
-==================================================
-
-Notification tap must work when:
-
-1. App is already open
-2. App is in background
-3. App was previously closed
-
-Use the correct flutter_local_notifications launch/tap handling.
-
-Do not assume one lifecycle state.
-
-==================================================
-REMINDER UI
-==================================================
-
-Connect the existing Stitch ReminderSelector.
-
-The UI should support:
-
-None
-On due date
-1 day before
-3 days before
-7 days before
-Custom if already designed
-
-Do not redesign the existing Stitch screen.
-
-Preserve:
-
-- typography
-- spacing
-- buttons
-- selector style
-- colors
-- hierarchy
-
-==================================================
-ADD DUE FLOW
-==================================================
-
-The final flow should be:
-
+Add Customer
 Add Due
+Record Payment
+Edit Due
+Cancel Due
 
-Customer
-Amount
-Description
-Due Date
-Reminder
+Verify immediate local state.
 
-→ Save
+Reconnect.
 
-Then:
+Verify synchronization.
 
-Due saved
-+
-Reminder scheduled
+Verify no duplicate records.
 
-Show a subtle success confirmation.
+Verify dashboard recalculates.
 
-Example:
+Verify search/filter continue working.
 
-"Due added. Reminder scheduled."
-
-Do not create an intrusive popup.
+Do NOT introduce SQLite.
 
 ==================================================
-EDIT DUE FLOW
+PART 12 — APP RESTART
 ==================================================
 
-When editing:
+Test:
 
-Due
-→ Edit
-→ Change reminder
-→ Save
+Online:
 
-Cancel old reminder.
+Create data.
 
-Schedule new reminder.
+Disconnect network.
 
-Show appropriate confirmation.
+Close application.
 
-==================================================
-REMINDER SETTINGS
-==================================================
+Reopen.
 
-If the existing Settings screen has notification/reminder preferences, connect them only if they already exist in the Stitch design.
+Verify cached data is available.
 
-Do not build a large notification settings system yet.
+Verify application does not crash.
 
-At minimum allow:
+Reconnect.
 
-Notifications enabled/disabled
-
-if the current design already contains such a control.
-
-The operating-system permission remains authoritative.
+Verify synchronization.
 
 ==================================================
-PERSISTENCE
+PART 13 — DATA LEAK AUDIT
 ==================================================
 
-Reminder configuration should persist with the Due.
+Search the codebase for:
 
-Use Firestore for the Due's reminder configuration.
+hardcoded customer names
+hardcoded amounts
+fake payment data
+placeholder financial metrics
+mock dashboards
+sample data accidentally included in production state
+test data loaded automatically
 
-Local scheduled notification state is device-specific.
+Remove accidental production mock data.
 
-Do not attempt to store local notification state in Firestore as if it were the notification itself.
-
-The Firestore record describes the desired reminder.
-
-The device notification service schedules the actual notification.
-
-==================================================
-MULTI-DEVICE BEHAVIOR
-==================================================
-
-Important:
-
-Local notifications are device-local.
-
-If the same account is used on two devices:
-
-Each device may need to schedule reminders independently.
-
-Do not claim server-side synchronization of local notifications.
-
-Structure the code so a future server-driven notification system can replace/augment local notifications.
+UI placeholders are acceptable only where they are clearly empty states.
 
 ==================================================
-NOTIFICATION FAILURE
+PART 14 — ERROR HANDLING
 ==================================================
 
-If local notification scheduling fails:
+Audit every major user action.
 
-- Due creation must still succeed.
-- Show a warning.
-- Log the technical failure for debugging.
-- Do not crash.
+Errors must distinguish:
 
-If permission is denied:
+Validation
+Authentication
+Authorization
+Network
+Firestore
+Notification
 
-- Save Due.
-- Mark reminder as configured in data if appropriate.
-- Clearly indicate reminders are currently disabled.
+Avoid:
 
-==================================================
-TESTING
-==================================================
+"Something went wrong."
 
-Add tests for:
+when a more useful message is possible.
 
-1. Reminder model serialization
-2. Reminder model deserialization
-3. Reminder date calculation
-4. One-day-before calculation
-5. Three-days-before calculation
-6. Seven-days-before calculation
-7. Due-date reminder calculation
-8. Past reminder time handling
-9. Notification ID generation
-10. Payment status interaction
-11. PAID cancels reminder
-12. CANCELLED cancels reminder
-13. PARTIALLY_PAID keeps reminder
-14. Editing due reschedules reminder
-
-Mock the notification service for unit tests.
-
-Do not require actual Android notifications for normal unit tests.
+Verify loading states prevent duplicate submission.
 
 ==================================================
-MANUAL TEST FLOW
+PART 15 — DOUBLE SUBMISSION
 ==================================================
 
-TEST 1 — ONE DAY BEFORE
+Test rapidly tapping:
 
-Create:
+Add Customer
+Save Due
+Record Payment
+Create Recurring Schedule
 
-Rahul
-₹1,500
-Due Aug 25
-Reminder 1 day before
+Verify duplicate records cannot be created.
+
+==================================================
+PART 16 — DELETE SAFETY
+==================================================
+
+Audit deletion.
+
+Customer deletion must not destroy financial history accidentally.
+
+Due deletion/cancellation must not corrupt payment calculations.
+
+Payment deletion must recalculate:
+
+Paid
+Remaining
+Status
+Dashboard
+
+Recurring schedule deletion must not delete historical Due records.
+
+==================================================
+PART 17 — SEARCH AND FILTER
+==================================================
 
 Verify:
 
-Reminder is scheduled for Aug 24 at configured/default time.
+Customer search
+Due search
+Today filter
+Upcoming filter
+Overdue filter
+Paid filter
 
-TEST 2 — DUE DATE
+Work with:
 
-Create:
-
-Arjun
-₹2,000
-Due tomorrow
-Reminder on due date
-
-Verify:
-
-Correct notification schedule.
-
-TEST 3 — NO REMINDER
-
-Create Due with:
-
-Reminder = None
-
-Verify:
-
-No notification scheduled.
-
-TEST 4 — EDIT
-
-Create:
-
-Due Aug 25
-Reminder Aug 24
-
-Edit:
-
-Due Aug 28
-
-Verify:
-
-Old notification cancelled.
-
-New notification scheduled.
-
-TEST 5 — PAID
-
-Create Due with reminder.
-
-Mark fully paid.
-
-Verify:
-
-Pending reminder is cancelled.
-
-TEST 6 — PARTIAL
-
-Create:
-
-₹5,000
-
-Pay:
-
-₹2,000
-
-Verify:
-
-Remaining ₹3,000.
-
-Reminder remains scheduled.
-
-TEST 7 — CANCEL
-
-Create Due with reminder.
-
-Cancel Due.
-
-Verify:
-
-Reminder is cancelled.
-
-TEST 8 — TAP
-
-Trigger a test notification.
-
-Tap it.
-
-Verify:
-
-DueIt opens the correct Due Details screen.
-
-TEST 9 — APP CLOSED
-
-Close the app.
-
-Trigger/test notification.
-
-Tap notification.
-
-Verify:
-
-Application opens and routes safely.
+Empty data
+Large data
+Partial search
+Case differences
+Whitespace
+Special characters
 
 ==================================================
-ANDROID REQUIREMENTS
+PART 18 — UI/UX AUDIT
 ==================================================
 
-Verify Android configuration required by flutter_local_notifications.
+Compare the running application against the original Google Stitch design.
 
-Handle notification permission correctly for supported Android versions.
+Audit:
 
-Do not blindly add permissions without understanding their purpose.
+Colors
+Typography
+Spacing
+Cards
+Buttons
+Bottom navigation
+Top bars
+Empty states
+Loading states
+Error states
+Dialogs
+Bottom sheets
+Form validation
 
-Ensure scheduled notifications work after app restart.
+Do not redesign the application.
 
-If exact Android configuration is required, implement it and document it.
-
-==================================================
-DO NOT IMPLEMENT
-==================================================
-
-Do NOT implement:
-
-Firebase Cloud Messaging
-Backend notification scheduler
-WhatsApp
-Email
-SMS
-Recurring reminders
-Daily overdue reminders
-AI-generated reminders
-UPI
-Payment gateway
-SQLite
-Offline sync
+Only fix clear regressions.
 
 ==================================================
-QUALITY GATE
+PART 19 — ACCESSIBILITY
 ==================================================
 
-Before declaring STEP 8 complete:
+Audit:
+
+Text readability
+Touch target sizes
+Contrast
+Semantic labels
+Keyboard behavior
+Form field focus
+Screen reader labels where appropriate
+
+Do not sacrifice the Stitch design unnecessarily.
+
+==================================================
+PART 20 — PERFORMANCE
+==================================================
+
+Look for:
+
+N+1 Firestore queries
+unnecessary rebuilds
+large widget rebuilds
+duplicate streams
+duplicate listeners
+memory leaks
+unclosed controllers
+unclosed subscriptions
+
+Verify:
+
+Dues screen
+Customers screen
+Dashboard
+
+do not create duplicate subscriptions when repeatedly opened.
+
+==================================================
+PART 21 — FIRESTORE COST REVIEW
+==================================================
+
+Review:
+
+watchCustomers
+watchDues
+watchPayments
+watchRecurringSchedules
+
+Verify no accidental listeners are created repeatedly.
+
+Verify listeners are disposed when no longer required.
+
+Document expected Firestore read behavior for a typical small business.
+
+Do not optimize prematurely.
+
+==================================================
+PART 22 — SECURITY CODE AUDIT
+==================================================
+
+Search for:
+
+hardcoded Firebase credentials
+API secrets
+private keys
+service-account JSON
+passwords
+tokens
+secret API keys
+
+No secrets should be committed into source code.
+
+Firebase client configuration values that are intentionally public identifiers are not equivalent to private secrets.
+
+Do not expose actual secrets in the final report.
+
+==================================================
+PART 23 — DEPENDENCY AUDIT
+==================================================
+
+Inspect pubspec.yaml.
+
+Identify:
+
+unused dependencies
+duplicate functionality
+obviously outdated dependencies
+unnecessary packages
+
+Do NOT perform a mass dependency upgrade.
+
+Only recommend upgrades that have a clear security or correctness reason.
+
+Do not upgrade flutter_local_notifications during this audit unless a concrete issue is discovered.
+
+==================================================
+PART 24 — TEST EXPANSION
+==================================================
+
+Add tests only for genuine uncovered risks discovered during the audit.
+
+Do not inflate the test count artificially.
 
 Run:
 
@@ -773,41 +700,86 @@ flutter analyze
 flutter test
 flutter build apk --debug
 
-Requirements:
+==================================================
+PART 25 — PHYSICAL DEVICE
+==================================================
 
-flutter analyze = 0 issues.
+If an Android device is available:
 
-All tests pass.
+Install the debug APK.
 
-Debug APK builds successfully.
+Test at minimum:
 
-Manually verify notification behavior on an actual Android device if available.
+1. Login
+2. Add customer
+3. Add due
+4. Schedule reminder
+5. Receive reminder
+6. Tap notification
+7. Partial payment
+8. Full payment
+9. Recurring due
+10. Offline create
+11. Reconnect
+12. App restart
 
-Do not claim scheduled Android notifications work solely because the project compiles.
+If no device is available:
 
-If physical-device verification is not possible, explicitly state that.
+DO NOT claim physical verification.
+
+Clearly report:
+
+"Physical-device verification not performed."
 
 ==================================================
 FINAL REPORT
 ==================================================
 
-Report:
+Provide a production audit report with:
 
-1. Notification package/version
-2. Notification service
-3. Reminder model
-4. Reminder scheduling logic
-5. Notification ID strategy
-6. Add Due integration
-7. Edit Due rescheduling
-8. Paid cancellation
-9. Cancelled cancellation
-10. Partial payment behavior
-11. Notification tap routing
-12. Android permission/configuration
-13. Tests
-14. APK build
-15. Physical-device verification status
-16. Known limitations
+1. End-to-end flow result
+2. Authentication result
+3. Firestore security result
+4. Data integrity result
+5. Payment integrity result
+6. Due status result
+7. Dashboard result
+8. Recurring result
+9. Reminder result
+10. Android notification result
+11. Offline result
+12. Restart result
+13. Data leak result
+14. Error handling result
+15. Double-submission result
+16. Delete safety result
+17. Search/filter result
+18. UI/UX result
+19. Accessibility result
+20. Performance result
+21. Firestore cost observations
+22. Security code audit
+23. Dependency audit
+24. New tests added
+25. Total tests
+26. flutter analyze
+27. APK build
+28. Physical-device verification
+29. Critical issues
+30. Recommended fixes
 
-STOP after STEP 8.
+IMPORTANT:
+
+Classify every discovered issue as:
+
+CRITICAL
+HIGH
+MEDIUM
+LOW
+INFORMATIONAL
+
+Do NOT silently fix risky architectural/security issues without reporting them.
+
+Do not start STEP 13.
+
+STOP after the audit.

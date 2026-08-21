@@ -13,7 +13,9 @@ import 'package:dueit/shared/widgets/recurrence_selector.dart';
 import 'package:dueit/shared/widgets/empty_state.dart';
 import 'package:dueit/features/customers/presentation/controllers/customer_controller.dart';
 import '../../domain/entities/due_entity.dart';
+import '../../domain/entities/recurring_due_schedule_entity.dart';
 import '../controllers/dues_controller.dart';
+import '../controllers/recurring_dues_controller.dart';
 
 class AddDueScreen extends ConsumerStatefulWidget {
   final String? preselectedCustomerId;
@@ -53,18 +55,18 @@ class _AddDueScreenState extends ConsumerState<AddDueScreen> {
     _amountController.text = (current + val).toInt().toString();
   }
 
-  RecurrenceType _getRecurrenceType(String val) {
+  RecurrenceFrequency _getRecurrenceFrequency(String val) {
     switch (val.toLowerCase()) {
       case 'weekly':
-        return RecurrenceType.weekly;
-      case 'monthly':
-        return RecurrenceType.monthly;
+        return RecurrenceFrequency.weekly;
       case 'quarterly':
+        return RecurrenceFrequency.quarterly;
       case 'annually':
       case 'yearly':
-        return RecurrenceType.yearly;
+        return RecurrenceFrequency.yearly;
+      case 'monthly':
       default:
-        return RecurrenceType.none;
+        return RecurrenceFrequency.monthly;
     }
   }
 
@@ -400,47 +402,97 @@ class _AddDueScreenState extends ConsumerState<AddDueScreen> {
 
                     final dueDateStr =
                         DateFormatter.formatIsoDate(_selectedDate);
+                    final isRecurring =
+                        _selectedRecurrence.toLowerCase() != 'one-time' &&
+                            _selectedRecurrence.toLowerCase() != 'none';
 
-                    final created = await ref
-                        .read(duesControllerProvider.notifier)
-                        .addDue(
-                          customerId: selectedCustomer.id,
-                          customerName: selectedCustomer.name,
-                          amount: amount,
-                          description: description,
-                          dueDate: dueDateStr,
-                          recurrence: _getRecurrenceType(_selectedRecurrence),
-                          reminderEnabled:
-                              _selectedReminder.toLowerCase() != 'none',
-                          reminderType: _getReminderType(_selectedReminder),
-                        );
+                    if (isRecurring) {
+                      final freq = _getRecurrenceFrequency(_selectedRecurrence);
+                      final schedule = await ref
+                          .read(recurringDuesControllerProvider.notifier)
+                          .createSchedule(
+                            customerId: selectedCustomer.id,
+                            customerName: selectedCustomer.name,
+                            amount: amount,
+                            description: description,
+                            frequency: freq,
+                            dayOfMonth: _selectedDate.day,
+                            dayOfWeek: _selectedDate.weekday,
+                            startDate: dueDateStr,
+                            reminderEnabled:
+                                _selectedReminder.toLowerCase() != 'none',
+                            reminderType: _getReminderType(_selectedReminder),
+                          );
 
-                    if (!mounted) return;
-                    setState(() => _isSubmitting = false);
-                    if (created != null) {
-                      if (context.mounted) {
-                        final hasReminder = created.reminderEnabled &&
-                            created.reminderType != ReminderType.none;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(hasReminder
-                                ? 'Due added. Reminder scheduled.'
-                                : 'Due added successfully.'),
-                            duration: const Duration(seconds: 2),
-                          ),
-                        );
-                        context.pop();
+                      if (!mounted) return;
+                      setState(() => _isSubmitting = false);
+
+                      if (schedule != null) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                  'Recurring ${freq.displayName} due schedule created.'),
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                          context.pop();
+                        }
+                      } else {
+                        final err =
+                            ref.read(recurringDuesControllerProvider).error ??
+                                'Failed to create recurring schedule.';
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(err),
+                              backgroundColor: AppColors.error,
+                            ),
+                          );
+                        }
                       }
                     } else {
-                      final err = ref.read(duesControllerProvider).error ??
-                          'Failed to create due.';
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(err),
-                            backgroundColor: AppColors.error,
-                          ),
-                        );
+                      final created = await ref
+                          .read(duesControllerProvider.notifier)
+                          .addDue(
+                            customerId: selectedCustomer.id,
+                            customerName: selectedCustomer.name,
+                            amount: amount,
+                            description: description,
+                            dueDate: dueDateStr,
+                            recurrence: RecurrenceType.none,
+                            reminderEnabled:
+                                _selectedReminder.toLowerCase() != 'none',
+                            reminderType: _getReminderType(_selectedReminder),
+                          );
+
+                      if (!mounted) return;
+                      setState(() => _isSubmitting = false);
+                      if (created != null) {
+                        if (context.mounted) {
+                          final hasReminder = created.reminderEnabled &&
+                              created.reminderType != ReminderType.none;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(hasReminder
+                                  ? 'Due added. Reminder scheduled.'
+                                  : 'Due added successfully.'),
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                          context.pop();
+                        }
+                      } else {
+                        final err = ref.read(duesControllerProvider).error ??
+                            'Failed to create due.';
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(err),
+                              backgroundColor: AppColors.error,
+                            ),
+                          );
+                        }
                       }
                     }
                   },

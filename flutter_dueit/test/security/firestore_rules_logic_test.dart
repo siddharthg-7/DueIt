@@ -18,10 +18,18 @@ class MockFirestoreSecurityContext {
   // Rule for /users/{userId}/customers/{customerId} - CREATE
   bool canCreateCustomer({
     required String pathUserId,
-    String? requestOwnerId,
+    required String requestOwnerId,
+    String? requestBusinessId,
   }) {
-    if (!isOwner(pathUserId)) return false;
-    if (requestOwnerId != null && requestOwnerId != pathUserId) return false;
+    if (!isOwner(pathUserId)) {
+      return false;
+    }
+    if (requestOwnerId != pathUserId) {
+      return false;
+    }
+    if (requestBusinessId != null && requestBusinessId != pathUserId) {
+      return false;
+    }
     return true;
   }
 
@@ -34,12 +42,19 @@ class MockFirestoreSecurityContext {
   bool canUpdateCustomer({
     required String pathUserId,
     required String currentOwnerId,
-    String? newOwnerId,
+    required String newOwnerId,
+    String? currentBusinessId,
+    String? newBusinessId,
   }) {
-    if (!isOwner(pathUserId)) return false;
-    if (newOwnerId != null &&
-        newOwnerId != currentOwnerId &&
-        newOwnerId != pathUserId) {
+    if (!isOwner(pathUserId)) {
+      return false;
+    }
+    if (newOwnerId != currentOwnerId) {
+      return false;
+    }
+    if (newBusinessId != null &&
+        currentBusinessId != null &&
+        newBusinessId != currentBusinessId) {
       return false;
     }
     return true;
@@ -53,10 +68,18 @@ class MockFirestoreSecurityContext {
   // Rule for /users/{userId}/dues/{dueId} - CREATE
   bool canCreateDue({
     required String pathUserId,
-    String? requestOwnerId,
+    required String requestOwnerId,
+    String? requestBusinessId,
   }) {
-    if (!isOwner(pathUserId)) return false;
-    if (requestOwnerId != null && requestOwnerId != pathUserId) return false;
+    if (!isOwner(pathUserId)) {
+      return false;
+    }
+    if (requestOwnerId != pathUserId) {
+      return false;
+    }
+    if (requestBusinessId != null && requestBusinessId != pathUserId) {
+      return false;
+    }
     return true;
   }
 
@@ -69,12 +92,19 @@ class MockFirestoreSecurityContext {
   bool canUpdateDue({
     required String pathUserId,
     required String currentOwnerId,
-    String? newOwnerId,
+    required String newOwnerId,
+    String? currentBusinessId,
+    String? newBusinessId,
   }) {
-    if (!isOwner(pathUserId)) return false;
-    if (newOwnerId != null &&
-        newOwnerId != currentOwnerId &&
-        newOwnerId != pathUserId) {
+    if (!isOwner(pathUserId)) {
+      return false;
+    }
+    if (newOwnerId != currentOwnerId) {
+      return false;
+    }
+    if (newBusinessId != null &&
+        currentBusinessId != null &&
+        newBusinessId != currentBusinessId) {
       return false;
     }
     return true;
@@ -88,10 +118,18 @@ class MockFirestoreSecurityContext {
   // Rule for /users/{userId}/payments/{paymentId} - CREATE
   bool canCreatePayment({
     required String pathUserId,
-    String? requestOwnerId,
+    required String requestOwnerId,
+    String? requestBusinessId,
   }) {
-    if (!isOwner(pathUserId)) return false;
-    if (requestOwnerId != null && requestOwnerId != pathUserId) return false;
+    if (!isOwner(pathUserId)) {
+      return false;
+    }
+    if (requestOwnerId != pathUserId) {
+      return false;
+    }
+    if (requestBusinessId != null && requestBusinessId != pathUserId) {
+      return false;
+    }
     return true;
   }
 
@@ -104,12 +142,19 @@ class MockFirestoreSecurityContext {
   bool canUpdatePayment({
     required String pathUserId,
     required String currentOwnerId,
-    String? newOwnerId,
+    required String newOwnerId,
+    String? currentBusinessId,
+    String? newBusinessId,
   }) {
-    if (!isOwner(pathUserId)) return false;
-    if (newOwnerId != null &&
-        newOwnerId != currentOwnerId &&
-        newOwnerId != pathUserId) {
+    if (!isOwner(pathUserId)) {
+      return false;
+    }
+    if (newOwnerId != currentOwnerId) {
+      return false;
+    }
+    if (newBusinessId != null &&
+        currentBusinessId != null &&
+        newBusinessId != currentBusinessId) {
       return false;
     }
     return true;
@@ -120,6 +165,56 @@ class MockFirestoreSecurityContext {
     return isOwner(pathUserId);
   }
 
+  // Rule for /users/{userId}/recurring_due_schedules/{scheduleId} - CREATE
+  bool canCreateRecurringSchedule({
+    required String pathUserId,
+    required String requestOwnerId,
+    String? requestBusinessId,
+  }) {
+    if (!isOwner(pathUserId)) {
+      return false;
+    }
+    if (requestOwnerId != pathUserId) {
+      return false;
+    }
+    if (requestBusinessId != null && requestBusinessId != pathUserId) {
+      return false;
+    }
+    return true;
+  }
+
+  // Rule for /users/{userId}/recurring_due_schedules/{scheduleId} - READ
+  bool canReadRecurringSchedule({required String pathUserId}) {
+    return isOwner(pathUserId);
+  }
+
+  // Rule for /users/{userId}/recurring_due_schedules/{scheduleId} - UPDATE
+  bool canUpdateRecurringSchedule({
+    required String pathUserId,
+    required String currentOwnerId,
+    required String newOwnerId,
+    String? currentBusinessId,
+    String? newBusinessId,
+  }) {
+    if (!isOwner(pathUserId)) {
+      return false;
+    }
+    if (newOwnerId != currentOwnerId) {
+      return false;
+    }
+    if (newBusinessId != null &&
+        currentBusinessId != null &&
+        newBusinessId != currentBusinessId) {
+      return false;
+    }
+    return true;
+  }
+
+  // Rule for /users/{userId}/recurring_due_schedules/{scheduleId} - DELETE
+  bool canDeleteRecurringSchedule({required String pathUserId}) {
+    return isOwner(pathUserId);
+  }
+
   // Rule for arbitrary wildcard / other collection
   bool canAccessUndeclaredPath(String path) {
     return false;
@@ -127,12 +222,14 @@ class MockFirestoreSecurityContext {
 }
 
 void main() {
-  group('Hardened Firestore Security Rules Logic Tests with Payments', () {
+  group(
+      'Hardened Firestore Security Rules Logic Tests with Recurring Schedules',
+      () {
     const userA = 'user_A';
     const userB = 'user_B';
 
     test(
-        '1. User A accessing own user document, customers, dues, and payments -> ALLOW',
+        '1. User A accessing own user document, customers, dues, payments, and recurring schedules -> ALLOW',
         () {
       final contextA = MockFirestoreSecurityContext(authUid: userA);
 
@@ -144,6 +241,7 @@ void main() {
         contextA.canCreateCustomer(
           pathUserId: userA,
           requestOwnerId: userA,
+          requestBusinessId: userA,
         ),
         isTrue,
       );
@@ -154,6 +252,7 @@ void main() {
         contextA.canCreateDue(
           pathUserId: userA,
           requestOwnerId: userA,
+          requestBusinessId: userA,
         ),
         isTrue,
       );
@@ -164,12 +263,25 @@ void main() {
         contextA.canCreatePayment(
           pathUserId: userA,
           requestOwnerId: userA,
+          requestBusinessId: userA,
+        ),
+        isTrue,
+      );
+
+      expect(contextA.canReadRecurringSchedule(pathUserId: userA), isTrue);
+      expect(contextA.canDeleteRecurringSchedule(pathUserId: userA), isTrue);
+      expect(
+        contextA.canCreateRecurringSchedule(
+          pathUserId: userA,
+          requestOwnerId: userA,
+          requestBusinessId: userA,
         ),
         isTrue,
       );
     });
 
-    test('2. User A accessing User B customers, dues, and payments -> DENY',
+    test(
+        '2. User A accessing User B customers, dues, payments, and recurring schedules -> DENY',
         () {
       final contextA = MockFirestoreSecurityContext(authUid: userA);
 
@@ -204,6 +316,16 @@ void main() {
         ),
         isFalse,
       );
+
+      expect(contextA.canReadRecurringSchedule(pathUserId: userB), isFalse);
+      expect(contextA.canDeleteRecurringSchedule(pathUserId: userB), isFalse);
+      expect(
+        contextA.canCreateRecurringSchedule(
+          pathUserId: userB,
+          requestOwnerId: userB,
+        ),
+        isFalse,
+      );
     });
 
     test('3. Unauthenticated request to any resource -> DENY', () {
@@ -215,17 +337,20 @@ void main() {
       expect(unauthenticated.canReadDue(pathUserId: userA), isFalse);
       expect(unauthenticated.canReadPayment(pathUserId: userA), isFalse);
       expect(
-        unauthenticated.canCreatePayment(
+          unauthenticated.canReadRecurringSchedule(pathUserId: userA), isFalse);
+      expect(
+        unauthenticated.canCreateRecurringSchedule(
           pathUserId: userA,
           requestOwnerId: userA,
         ),
         isFalse,
       );
-      expect(unauthenticated.canDeletePayment(pathUserId: userA), isFalse);
+      expect(unauthenticated.canDeleteRecurringSchedule(pathUserId: userA),
+          isFalse);
     });
 
     test(
-        '4. User A attempting to forge ownerId on customer/due/payment creation -> DENY',
+        '4. User A attempting to forge ownerId or businessId on creation -> DENY',
         () {
       final contextA = MockFirestoreSecurityContext(authUid: userA);
 
@@ -253,13 +378,32 @@ void main() {
         ),
         isFalse,
       );
+
+      expect(
+        contextA.canCreateRecurringSchedule(
+          pathUserId: userA,
+          requestOwnerId: userB,
+        ),
+        isFalse,
+      );
+
+      // Path is user_A, but payload claims businessId is user_B
+      expect(
+        contextA.canCreateRecurringSchedule(
+          pathUserId: userA,
+          requestOwnerId: userA,
+          requestBusinessId: userB,
+        ),
+        isFalse,
+      );
     });
 
     test(
-        '5. User A attempting to hijack/transfer customer, due, or payment ownerId on update -> DENY',
+        '5. User A attempting to hijack/transfer ownerId or businessId on update -> DENY',
         () {
       final contextA = MockFirestoreSecurityContext(authUid: userA);
 
+      // OwnerId mutation attempts
       expect(
         contextA.canUpdateCustomer(
           pathUserId: userA,
@@ -287,12 +431,35 @@ void main() {
         isFalse,
       );
 
-      // Updating without changing ownerId -> ALLOW
       expect(
-        contextA.canUpdatePayment(
+        contextA.canUpdateRecurringSchedule(
+          pathUserId: userA,
+          currentOwnerId: userA,
+          newOwnerId: userB,
+        ),
+        isFalse,
+      );
+
+      // BusinessId mutation attempt
+      expect(
+        contextA.canUpdateRecurringSchedule(
           pathUserId: userA,
           currentOwnerId: userA,
           newOwnerId: userA,
+          currentBusinessId: userA,
+          newBusinessId: userB,
+        ),
+        isFalse,
+      );
+
+      // Updating without changing ownerId or businessId -> ALLOW
+      expect(
+        contextA.canUpdateRecurringSchedule(
+          pathUserId: userA,
+          currentOwnerId: userA,
+          newOwnerId: userA,
+          currentBusinessId: userA,
+          newBusinessId: userA,
         ),
         isTrue,
       );

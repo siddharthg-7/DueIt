@@ -261,10 +261,14 @@ class DuesController extends StateNotifier<DuesState> {
       // Schedule local notification reminder if enabled
       if (created.reminderEnabled &&
           created.reminderType != ReminderType.none) {
-        await _notificationService.scheduleDueReminder(
-          created,
-          customerName: created.customerName,
-        );
+        try {
+          await _notificationService.scheduleDueReminder(
+            created,
+            customerName: created.customerName,
+          );
+        } catch (e) {
+          // Notification failure should not fail due creation
+        }
       }
 
       state = state.copyWith(isSaving: false);
@@ -314,15 +318,19 @@ class DuesController extends StateNotifier<DuesState> {
       await _repository.updateDue(updated);
 
       // Reschedule or cancel local reminder
-      await _notificationService.cancelReminderForDue(updated.id);
-      if (updated.reminderEnabled &&
-          updated.reminderType != ReminderType.none &&
-          updated.status != DueStatus.paid &&
-          updated.status != DueStatus.cancelled) {
-        await _notificationService.scheduleDueReminder(
-          updated,
-          customerName: updated.customerName,
-        );
+      try {
+        await _notificationService.cancelReminderForDue(updated.id);
+        if (updated.reminderEnabled &&
+            updated.reminderType != ReminderType.none &&
+            updated.status != DueStatus.paid &&
+            updated.status != DueStatus.cancelled) {
+          await _notificationService.scheduleDueReminder(
+            updated,
+            customerName: updated.customerName,
+          );
+        }
+      } catch (e) {
+        // Notification failure should not fail due update
       }
 
       state = state.copyWith(isSaving: false);
@@ -452,22 +460,26 @@ class DuesController extends StateNotifier<DuesState> {
       final recorded = await _repository.recordPayment(paymentToSave);
 
       // Status change interaction with reminder
-      final remainingAfterPayment = due.remainingAmount - amount;
-      if (remainingAfterPayment <= 0.001) {
-        // Due is now PAID -> Cancel pending reminder
-        await _notificationService.cancelReminderForDue(dueId);
-      } else {
-        // PARTIALLY_PAID -> Keep reminder active with updated remaining balance
-        if (due.reminderEnabled && due.reminderType != ReminderType.none) {
-          final partiallyPaidDue = due.copyWith(
-            paidAmount: due.paidAmount + amount,
-            status: DueStatus.partiallyPaid,
-          );
-          await _notificationService.scheduleDueReminder(
-            partiallyPaidDue,
-            customerName: due.customerName,
-          );
+      try {
+        final remainingAfterPayment = due.remainingAmount - amount;
+        if (remainingAfterPayment <= 0.001) {
+          // Due is now PAID -> Cancel pending reminder
+          await _notificationService.cancelReminderForDue(dueId);
+        } else {
+          // PARTIALLY_PAID -> Keep reminder active with updated remaining balance
+          if (due.reminderEnabled && due.reminderType != ReminderType.none) {
+            final partiallyPaidDue = due.copyWith(
+              paidAmount: due.paidAmount + amount,
+              status: DueStatus.partiallyPaid,
+            );
+            await _notificationService.scheduleDueReminder(
+              partiallyPaidDue,
+              customerName: due.customerName,
+            );
+          }
         }
+      } catch (e) {
+        // Notification failure should not fail payment recording
       }
 
       state = state.copyWith(isSaving: false);

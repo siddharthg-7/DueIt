@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'firebase_options.dart';
 import 'app.dart';
 import 'core/routing/app_router.dart';
@@ -10,16 +11,22 @@ import 'features/reminders/data/services/local_notification_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 1. Initialize Firebase
+  // 1. Initialize Firebase & Firestore Offline Persistence
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+
+    // Configure explicit offline persistence with unlimited cache
+    FirebaseFirestore.instance.settings = const Settings(
+      persistenceEnabled: true,
+      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+    );
   } catch (e) {
-    debugPrint('Firebase initialization notice: $e');
+    debugPrint('Firebase/Firestore initialization notice: $e');
   }
 
-  // 2. Initialize Local Notifications Service
+  // 2. Initialize Local Notifications Service (Device-local, network independent)
   final notificationService = LocalNotificationServiceImpl();
   try {
     await notificationService.initialize(
