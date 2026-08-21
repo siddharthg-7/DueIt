@@ -99,7 +99,9 @@ void main() {
           ReminderCalculator.isPastReminder(futureReminder, now: now), isFalse);
     });
 
-    test('10. Deterministic positive 31-bit Notification ID generation', () {
+    test(
+        '10. Deterministic positive 31-bit Notification ID generation (FNV-1a)',
+        () {
       final id1 = ReminderCalculator.generateNotificationId('due_100');
       final id2 = ReminderCalculator.generateNotificationId('due_100');
       final id3 = ReminderCalculator.generateNotificationId('due_200');
@@ -108,6 +110,46 @@ void main() {
       expect(id1, isNonNegative);
       expect(id3, isNonNegative);
       expect(id1, isNot(equals(id3)));
+
+      // Range check: strictly within 31-bit signed positive integer range
+      expect(id1 >= 0 && id1 <= 0x7FFFFFFF, isTrue);
+      expect(id3 >= 0 && id3 <= 0x7FFFFFFF, isTrue);
+
+      // Empty dueId returns 0
+      expect(ReminderCalculator.generateNotificationId(''), 0);
+    });
+
+    test(
+        '10b. Deterministic stability and collision resistance across representative Firestore IDs',
+        () {
+      final testIds = [
+        'due_001',
+        'due_002',
+        'due_abc_123',
+        'cZ9eK2X1mQ8aB4vL',
+        'pL9xY2W4vR7mN3kQ',
+        'user_123_due_456',
+        'd7a8e2b1-9c3f-4e5a-8b1c-3d5e7f9a1b3c',
+        'd7a8e2b1-9c3f-4e5a-8b1c-3d5e7f9a1b3d',
+      ];
+
+      final generatedIds = <int>{};
+      for (final id in testIds) {
+        final notifId1 = ReminderCalculator.generateNotificationId(id);
+        final notifId2 = ReminderCalculator.generateNotificationId(id);
+
+        // Determinism: Repeated calls must return exact same integer ID
+        expect(notifId1, equals(notifId2));
+
+        // Range constraint: Safe for Android NotificationManager
+        expect(notifId1 >= 0, isTrue);
+        expect(notifId1 <= 0x7FFFFFFF, isTrue);
+
+        generatedIds.add(notifId1);
+      }
+
+      // No collisions among distinct test keys
+      expect(generatedIds.length, equals(testIds.length));
     });
 
     test('11. Notification Title generation based on due date proximity', () {

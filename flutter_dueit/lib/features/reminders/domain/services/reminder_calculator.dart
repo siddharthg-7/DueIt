@@ -80,9 +80,27 @@ abstract class ReminderCalculator {
   }
 
   /// Generates a deterministic, positive 31-bit integer ID for local notifications
-  /// based on the Due's unique ID.
+  /// based on the Due's unique ID using the standard 32-bit FNV-1a hash algorithm.
+  ///
+  /// Unlike Dart's runtime `Object.hashCode` (which is VM-implementation dependent
+  /// and may vary across process restarts or build modes), FNV-1a produces an exact,
+  /// immutable hash for the same string across all platforms, app restarts, and architectures.
+  ///
+  /// Range: [0, 2147483647] (signed 32-bit positive integer safe for Android NotificationManager).
   static int generateNotificationId(String dueId) {
-    return dueId.hashCode & 0x7FFFFFFF;
+    if (dueId.isEmpty) return 0;
+
+    const int fnvOffsetBasis = 0x811C9DC5;
+    const int fnvPrime = 0x01000193;
+
+    int hash = fnvOffsetBasis;
+    for (int i = 0; i < dueId.length; i++) {
+      hash ^= dueId.codeUnitAt(i);
+      hash = (hash * fnvPrime) & 0xFFFFFFFF;
+    }
+
+    // Force to positive 31-bit integer range [0, 0x7FFFFFFF] (2,147,483,647)
+    return hash & 0x7FFFFFFF;
   }
 
   /// Builds a concise, friendly notification title based on due date.
