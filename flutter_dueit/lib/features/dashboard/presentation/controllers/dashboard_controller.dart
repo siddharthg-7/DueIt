@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dueit/core/utils/date_formatter.dart';
 import 'package:dueit/features/dues/domain/entities/due_entity.dart';
 import 'package:dueit/features/dues/presentation/controllers/dues_controller.dart';
 
@@ -32,45 +33,37 @@ final dashboardMetricsProvider = Provider<DashboardMetrics>((ref) {
   final duesState = ref.watch(duesControllerProvider);
   final dues = duesState.dues;
 
+  // Active dues exclude cancelled dues
+  final activeDues =
+      dues.where((d) => d.status != DueStatus.cancelled).toList();
+
+  // 1. Today's Dues: dueDate == today
+  final todayDues = activeDues.where((d) {
+    return DateFormatter.isToday(d.dueDate) && d.status != DueStatus.paid;
+  }).toList();
+  final todaySum =
+      todayDues.fold<double>(0, (sum, d) => sum + d.remainingAmount);
+
+  // 2. Overdue Dues: dueDate < today
+  final overdueDues = activeDues.where((d) {
+    return DateFormatter.isBeforeToday(d.dueDate) && d.status != DueStatus.paid;
+  }).toList();
+  final overdueSum =
+      overdueDues.fold<double>(0, (sum, d) => sum + d.remainingAmount);
+
+  // 3. Upcoming Dues: dueDate > today
+  final upcomingDues = activeDues.where((d) {
+    return DateFormatter.isAfterToday(d.dueDate) && d.status != DueStatus.paid;
+  }).toList();
+  final upcomingSum =
+      upcomingDues.fold<double>(0, (sum, d) => sum + d.remainingAmount);
+
+  // 4. Month Breakdown (Calculated from active dues)
   final now = DateTime.now();
-  final todayStr =
-      '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
   final currentYearMonth =
       '${now.year}-${now.month.toString().padLeft(2, '0')}';
 
-  // Today
-  final todayPending = dues.where((d) {
-    final isToday = d.dueDate == todayStr;
-    final isNotSettled =
-        d.status != DueStatus.paid && d.status != DueStatus.cancelled;
-    return isToday && isNotSettled;
-  }).toList();
-  final todaySum =
-      todayPending.fold<double>(0, (sum, d) => sum + d.remainingAmount);
-
-  // Overdue
-  final overdueList = dues.where((d) {
-    final isOverdue = d.status == DueStatus.overdue ||
-        (d.dueDate.compareTo(todayStr) < 0 &&
-            !d.isFullyPaid &&
-            d.status != DueStatus.cancelled);
-    return isOverdue;
-  }).toList();
-  final overdueSum =
-      overdueList.fold<double>(0, (sum, d) => sum + d.remainingAmount);
-
-  // Upcoming
-  final upcomingList = dues.where((d) {
-    final isUpcoming = d.dueDate.compareTo(todayStr) > 0 &&
-        !d.isFullyPaid &&
-        d.status != DueStatus.cancelled;
-    return isUpcoming;
-  }).toList();
-  final upcomingSum =
-      upcomingList.fold<double>(0, (sum, d) => sum + d.remainingAmount);
-
-  // Monthly breakdown
-  final monthDues = dues.where((d) {
+  final monthDues = activeDues.where((d) {
     return d.dueDate.startsWith(currentYearMonth) ||
         (d.paidAt != null && d.paidAt!.startsWith(currentYearMonth));
   }).toList();
@@ -78,8 +71,7 @@ final dashboardMetricsProvider = Provider<DashboardMetrics>((ref) {
   final collectedMonth =
       monthDues.fold<double>(0, (sum, d) => sum + d.paidAmount);
   final pendingMonth = monthDues
-      .where(
-          (d) => d.status != DueStatus.paid && d.status != DueStatus.cancelled)
+      .where((d) => d.status != DueStatus.paid)
       .fold<double>(0, (sum, d) => sum + d.remainingAmount);
   final expectedMonth = collectedMonth + pendingMonth;
   final rate =
@@ -87,11 +79,11 @@ final dashboardMetricsProvider = Provider<DashboardMetrics>((ref) {
 
   return DashboardMetrics(
     todayTotal: todaySum,
-    todayDues: todayPending,
+    todayDues: todayDues,
     overdueTotal: overdueSum,
-    overdueDues: overdueList,
+    overdueDues: overdueDues,
     upcomingTotal: upcomingSum,
-    upcomingDues: upcomingList,
+    upcomingDues: upcomingDues,
     expectedMonthTotal: expectedMonth,
     collectedMonthTotal: collectedMonth,
     pendingMonthTotal: pendingMonth,

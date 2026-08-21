@@ -16,6 +16,22 @@ abstract class DateFormatter {
     return '$year-$month-$day';
   }
 
+  static String todayIsoDate() {
+    return formatIsoDate(DateTime.now());
+  }
+
+  static bool isToday(String isoDate) {
+    return isoDate == todayIsoDate();
+  }
+
+  static bool isBeforeToday(String isoDate) {
+    return isoDate.compareTo(todayIsoDate()) < 0;
+  }
+
+  static bool isAfterToday(String isoDate) {
+    return isoDate.compareTo(todayIsoDate()) > 0;
+  }
+
   static String formatDateTime(DateTime date) {
     return DateFormat('d MMM yyyy, h:mm a').format(date);
   }

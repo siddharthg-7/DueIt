@@ -155,8 +155,8 @@ void main() {
       expect(container.read(customerControllerProvider).searchQuery, 'Rahul');
 
       ctrl.setFilterTab('With Balance');
-      expect(container.read(customerControllerProvider).filterTab,
-          'With Balance');
+      expect(
+          container.read(customerControllerProvider).filterTab, 'With Balance');
     });
 
     test('7. Database error handling sets human-readable error state',

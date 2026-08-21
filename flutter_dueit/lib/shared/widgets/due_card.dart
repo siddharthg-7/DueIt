@@ -8,6 +8,7 @@ import 'status_badge.dart';
 
 class DueCard extends StatelessWidget {
   final DueEntity due;
+  final String? customerName;
   final VoidCallback? onTap;
   final VoidCallback? onQuickPay;
   final VoidCallback? onQuickWhatsApp;
@@ -15,6 +16,7 @@ class DueCard extends StatelessWidget {
   const DueCard({
     super.key,
     required this.due,
+    this.customerName,
     this.onTap,
     this.onQuickPay,
     this.onQuickWhatsApp,
@@ -22,6 +24,10 @@ class DueCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final displayName = (customerName != null && customerName!.isNotEmpty)
+        ? customerName!
+        : (due.customerName.isNotEmpty ? due.customerName : 'Client');
+
     final isPaid = due.status == DueStatus.paid;
     final isOverdue = due.status == DueStatus.overdue;
 
@@ -53,9 +59,7 @@ class DueCard extends StatelessWidget {
                 ),
                 alignment: Alignment.center,
                 child: Text(
-                  due.customerName.isNotEmpty
-                      ? due.customerName[0].toUpperCase()
-                      : 'D',
+                  displayName.isNotEmpty ? displayName[0].toUpperCase() : 'D',
                   style: AppTypography.titleMedium.copyWith(
                     color: isPaid
                         ? AppColors.onSecondaryContainer
@@ -74,7 +78,7 @@ class DueCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      due.customerName,
+                      displayName,
                       style: AppTypography.titleMedium.copyWith(
                         fontWeight: FontWeight.w600,
                       ),

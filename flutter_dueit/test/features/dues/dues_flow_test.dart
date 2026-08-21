@@ -1,22 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dueit/core/utils/date_formatter.dart';
 import 'package:dueit/features/auth/domain/entities/user_entity.dart';
 import 'package:dueit/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:dueit/features/customers/domain/entities/customer_entity.dart';
 import 'package:dueit/features/customers/presentation/controllers/customer_controller.dart';
-import 'package:dueit/features/customers/presentation/screens/customers_screen.dart';
-import 'package:dueit/features/customers/presentation/screens/customer_details_screen.dart';
+import 'package:dueit/features/dues/domain/entities/due_entity.dart';
 import 'package:dueit/features/dues/presentation/controllers/dues_controller.dart';
+import 'package:dueit/features/dues/presentation/screens/add_due_screen.dart';
+import 'package:dueit/features/dues/presentation/screens/dues_screen.dart';
+import 'package:dueit/features/dues/presentation/screens/due_details_screen.dart';
 import '../../mocks/fake_auth_repository.dart';
 import '../../mocks/fake_customer_repository.dart';
 import '../../mocks/fake_dues_repository.dart';
 
 void main() {
-  group('Customer Flow UI & Widget Tests', () {
+  group('Dues UI Flow & Widget Tests', () {
     late FakeAuthRepository fakeAuthRepo;
     late FakeCustomerRepository fakeCustomerRepo;
     late FakeDuesRepository fakeDuesRepo;
+
+    final todayStr = DateFormatter.todayIsoDate();
+    final yesterdayStr = DateFormatter.formatIsoDate(
+        DateTime.now().subtract(const Duration(days: 1)));
 
     setUp(() {
       const testUser = UserEntity(
@@ -33,28 +40,47 @@ void main() {
           CustomerEntity(
             id: 'c1',
             ownerId: 'owner_1',
-            businessId: 'owner_1',
             name: 'Rahul Kumar',
             phone: '+91 98765 43210',
-            email: 'rahul@example.com',
-            notes: 'Evening Karate Batch',
-            createdAt: DateTime(2026, 1, 1),
-            updatedAt: DateTime(2026, 1, 1),
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
           ),
           CustomerEntity(
             id: 'c2',
             ownerId: 'owner_1',
-            businessId: 'owner_1',
             name: 'Arjun Sharma',
             phone: '+91 98222 33445',
-            email: 'arjun@example.com',
-            notes: 'Gym Session',
-            createdAt: DateTime(2026, 2, 1),
-            updatedAt: DateTime(2026, 2, 1),
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
           ),
         ],
       );
-      fakeDuesRepo = FakeDuesRepository(ownerId: 'owner_1');
+
+      fakeDuesRepo = FakeDuesRepository(
+        ownerId: 'owner_1',
+        initialDues: [
+          DueEntity(
+            id: 'd1',
+            ownerId: 'owner_1',
+            customerId: 'c1',
+            customerName: 'Rahul Kumar',
+            amount: 1500.0,
+            description: 'August Karate Fee',
+            dueDate: todayStr,
+            status: DueStatus.due,
+          ),
+          DueEntity(
+            id: 'd2',
+            ownerId: 'owner_1',
+            customerId: 'c2',
+            customerName: 'Arjun Sharma',
+            amount: 2000.0,
+            description: 'Monthly Membership',
+            dueDate: yesterdayStr,
+            status: DueStatus.overdue,
+          ),
+        ],
+      );
     });
 
     tearDown(() {
@@ -63,7 +89,7 @@ void main() {
       fakeDuesRepo.dispose();
     });
 
-    testWidgets('1. CustomersScreen displays customer list and search field',
+    testWidgets('1. DuesScreen displays dues list and filter tabs',
         (tester) async {
       await tester.pumpWidget(
         ProviderScope(
@@ -73,34 +99,28 @@ void main() {
             duesRepositoryProvider.overrideWithValue(fakeDuesRepo),
           ],
           child: const MaterialApp(
-            home: CustomersScreen(),
+            home: DuesScreen(),
           ),
         ),
       );
 
       await tester.pumpAndSettle();
 
-      // Verify header and items
-      expect(find.text('People'), findsOneWidget);
-      expect(find.text('Rahul Kumar'), findsOneWidget);
-      expect(find.text('Arjun Sharma'), findsOneWidget);
+      expect(find.text('Dues'), findsOneWidget);
+      expect(find.text('August Karate Fee'), findsOneWidget);
+      expect(find.text('Monthly Membership'), findsOneWidget);
 
-      // Search for Arjun
-      final searchField = find.byType(TextField).first;
-      await tester.enterText(searchField, 'Arjun');
+      // Tap Today filter
+      final todayFilter = find.widgetWithText(ChoiceChip, 'Today');
+      expect(todayFilter, findsOneWidget);
+      await tester.tap(todayFilter);
       await tester.pumpAndSettle();
 
-      // Only Arjun should be visible
-      expect(find.text('Arjun Sharma'), findsOneWidget);
-      expect(find.text('Rahul Kumar'), findsNothing);
-
-      // Clear search
-      await tester.enterText(searchField, '');
-      await tester.pumpAndSettle();
-      expect(find.text('Rahul Kumar'), findsOneWidget);
+      expect(find.text('August Karate Fee'), findsOneWidget);
+      expect(find.text('Monthly Membership'), findsNothing);
     });
 
-    testWidgets('2. Add Client bottom sheet validates required name',
+    testWidgets('2. AddDueScreen shows customer dropdown and creates due',
         (tester) async {
       await tester.pumpWidget(
         ProviderScope(
@@ -110,31 +130,19 @@ void main() {
             duesRepositoryProvider.overrideWithValue(fakeDuesRepo),
           ],
           child: const MaterialApp(
-            home: CustomersScreen(),
+            home: AddDueScreen(),
           ),
         ),
       );
 
       await tester.pumpAndSettle();
 
-      // Tap FAB to open Add Client
-      final fab = find.byType(FloatingActionButton);
-      expect(fab, findsOneWidget);
-      await tester.tap(fab);
-      await tester.pumpAndSettle();
-
-      expect(find.text('Add New Client'), findsOneWidget);
-
-      // Tap Save Client with empty name
-      final saveBtn = find.widgetWithText(FilledButton, 'Save Client');
-      expect(saveBtn, findsOneWidget);
-      await tester.tap(saveBtn);
-      await tester.pumpAndSettle();
-
-      expect(find.text('Client name is required'), findsOneWidget);
+      expect(find.text('Add Due'), findsOneWidget);
+      expect(find.text('Who? (Client)'), findsOneWidget);
+      expect(find.text('Create Due'), findsOneWidget);
     });
 
-    testWidgets('3. CustomerDetailsScreen renders details and shows popup menu',
+    testWidgets('3. DueDetailsScreen shows due information and popup menu',
         (tester) async {
       await tester.pumpWidget(
         ProviderScope(
@@ -144,26 +152,26 @@ void main() {
             duesRepositoryProvider.overrideWithValue(fakeDuesRepo),
           ],
           child: const MaterialApp(
-            home: CustomerDetailsScreen(customerId: 'c1'),
+            home: DueDetailsScreen(dueId: 'd1'),
           ),
         ),
       );
 
       await tester.pumpAndSettle();
 
-      // Verify details
+      expect(find.text('Due Details'), findsOneWidget);
+      expect(find.text('August Karate Fee'), findsOneWidget);
       expect(find.text('Rahul Kumar'), findsOneWidget);
-      expect(find.text('+91 98765 43210'), findsOneWidget);
-      expect(find.text('Evening Karate Batch'), findsOneWidget);
 
-      // Open popup menu
+      // Check popup menu
       final popupMenu = find.byType(PopupMenuButton<String>);
       expect(popupMenu, findsOneWidget);
       await tester.tap(popupMenu);
       await tester.pumpAndSettle();
 
-      expect(find.text('Edit Client'), findsOneWidget);
-      expect(find.text('Delete Client'), findsOneWidget);
+      expect(find.text('Edit Due'), findsOneWidget);
+      expect(find.text('Cancel Due'), findsOneWidget);
+      expect(find.text('Delete Record'), findsOneWidget);
     });
   });
 }

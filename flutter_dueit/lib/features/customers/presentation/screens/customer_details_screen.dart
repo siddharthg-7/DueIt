@@ -270,13 +270,44 @@ class CustomerDetailsScreen extends ConsumerWidget {
 
   void _confirmDeleteCustomer(
       BuildContext context, WidgetRef ref, CustomerEntity customer) {
+    final hasActiveDues = ref
+        .read(duesControllerProvider.notifier)
+        .hasActiveDuesForCustomer(customer.id);
+
+    if (hasActiveDues) {
+      showDialog(
+        context: context,
+        builder: (dialogCtx) => AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(
+            'Cannot Delete Customer',
+            style:
+                AppTypography.titleMedium.copyWith(fontWeight: FontWeight.bold),
+          ),
+          content: Text(
+            '${customer.name} has active payments due. Please resolve or cancel those dues before deleting this customer.',
+            style: AppTypography.bodyMedium,
+          ),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (dialogCtx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
           'Delete ${customer.name}?',
-          style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.bold),
+          style:
+              AppTypography.titleMedium.copyWith(fontWeight: FontWeight.bold),
         ),
         content: Text(
           'This will permanently remove this customer from your business records.',

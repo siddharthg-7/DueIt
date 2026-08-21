@@ -4,11 +4,13 @@ import 'package:go_router/go_router.dart';
 import 'package:dueit/core/theme/app_colors.dart';
 import 'package:dueit/core/theme/app_typography.dart';
 import 'package:dueit/core/utils/date_formatter.dart';
+import 'package:dueit/core/routing/route_names.dart';
 import 'package:dueit/shared/widgets/app_top_bar.dart';
 import 'package:dueit/shared/widgets/app_text_field.dart';
 import 'package:dueit/shared/widgets/date_selector.dart';
 import 'package:dueit/shared/widgets/reminder_selector.dart';
 import 'package:dueit/shared/widgets/recurrence_selector.dart';
+import 'package:dueit/shared/widgets/empty_state.dart';
 import 'package:dueit/features/customers/presentation/controllers/customer_controller.dart';
 import '../../domain/entities/due_entity.dart';
 import '../controllers/dues_controller.dart';
@@ -23,13 +25,15 @@ class AddDueScreen extends ConsumerStatefulWidget {
 }
 
 class _AddDueScreenState extends ConsumerState<AddDueScreen> {
-  final TextEditingController _amountController = TextEditingController();
+  final TextEditingController _amountController =
+      TextEditingController(text: '1500');
   final TextEditingController _descController =
       TextEditingController(text: 'August Karate Fee');
   String? _selectedCustomerId;
   DateTime _selectedDate = DateTime.now();
   String _selectedRecurrence = 'Monthly';
   String _selectedReminder = '1 day before';
+  bool _isSubmitting = false;
 
   @override
   void initState() {
@@ -57,6 +61,7 @@ class _AddDueScreenState extends ConsumerState<AddDueScreen> {
         return RecurrenceType.monthly;
       case 'quarterly':
       case 'annually':
+      case 'yearly':
         return RecurrenceType.yearly;
       default:
         return RecurrenceType.none;
@@ -89,6 +94,28 @@ class _AddDueScreenState extends ConsumerState<AddDueScreen> {
 
     final selectedCustomer =
         customers.where((c) => c.id == _selectedCustomerId).firstOrNull;
+
+    if (customers.isEmpty && !customerState.isLoading) {
+      return Scaffold(
+        appBar: AppTopBar(
+          title: 'Add Due',
+          showBack: true,
+          onBack: () => context.pop(),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: EmptyState(
+              icon: Icons.person_add_disabled_outlined,
+              title: 'No Customers Found',
+              description: 'Add a customer before creating a payment due.',
+              actionText: '+ Go to People',
+              onAction: () => context.push(RouteNames.customers),
+            ),
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: AppTopBar(
@@ -248,10 +275,12 @@ class _AddDueScreenState extends ConsumerState<AddDueScreen> {
                     ),
                   ),
                   items: customers.map((c) {
+                    final displayPhone =
+                        c.phone.isNotEmpty ? ' (${c.phone})' : '';
                     return DropdownMenuItem<String>(
                       value: c.id,
                       child: Text(
-                        '${c.name} (${c.phone})',
+                        '${c.name}$displayPhone',
                         style: AppTypography.bodyLarge
                             .copyWith(color: AppColors.onSurface),
                       ),
@@ -276,7 +305,7 @@ class _AddDueScreenState extends ConsumerState<AddDueScreen> {
             ),
             child: AppTextField(
               controller: _descController,
-              label: 'For (Description / Reason)',
+              label: 'For (Description / Reason) *',
               hintText: 'e.g. August Karate Fee, Monthly Retainer',
               prefixIcon: Icons.description_outlined,
             ),
@@ -348,49 +377,99 @@ class _AddDueScreenState extends ConsumerState<AddDueScreen> {
           width: double.infinity,
           height: 54,
           child: FilledButton.icon(
-            onPressed: () async {
-              final amount =
-                  double.tryParse(_amountController.text.trim()) ?? 1500.0;
-              if (selectedCustomer == null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Please select a customer.')),
-                );
-                return;
-              }
+            onPressed: _isSubmitting
+                ? null
+                : () async {
+                    final amountText = _amountController.text.trim();
+                    final amount = double.tryParse(amountText);
 
-              final dueDateStr = DateFormatter.formatIsoDate(_selectedDate);
+                    if (amount == null || amount <= 0) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('Enter an amount greater than ₹0.')),
+                      );
+                      return;
+                    }
 
-              await ref.read(duesControllerProvider.notifier).addDue(
-                    customerId: selectedCustomer.id,
-                    customerName: selectedCustomer.name,
-                    amount: amount,
-                    description: _descController.text.trim().isEmpty
-                        ? 'Payment Due'
-                        : _descController.text.trim(),
-                    dueDate: dueDateStr,
-                    recurrence: _getRecurrenceType(_selectedRecurrence),
-                    reminderEnabled: _selectedReminder.toLowerCase() != 'none',
-                    reminderType: _getReminderType(_selectedReminder),
-                  );
+                    if (selectedCustomer == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Select a customer.')),
+                      );
+                      return;
+                    }
 
-              if (context.mounted) {
-                context.pop();
-              }
-            },
+                    final description = _descController.text.trim();
+                    if (description.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('Enter what this payment is for.')),
+                      );
+                      return;
+                    }
+
+                    setState(() => _isSubmitting = true);
+
+                    final dueDateStr =
+                        DateFormatter.formatIsoDate(_selectedDate);
+
+                    final created = await ref
+                        .read(duesControllerProvider.notifier)
+                        .addDue(
+                          customerId: selectedCustomer.id,
+                          customerName: selectedCustomer.name,
+                          amount: amount,
+                          description: description,
+                          dueDate: dueDateStr,
+                          recurrence: _getRecurrenceType(_selectedRecurrence),
+                          reminderEnabled:
+                              _selectedReminder.toLowerCase() != 'none',
+                          reminderType: _getReminderType(_selectedReminder),
+                        );
+
+                    if (!mounted) return;
+                    setState(() => _isSubmitting = false);
+                    if (created != null) {
+                      if (context.mounted) {
+                        context.pop();
+                      }
+                    } else {
+                      final err = ref.read(duesControllerProvider).error ??
+                          'Failed to create due.';
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(err),
+                            backgroundColor: AppColors.error,
+                          ),
+                        );
+                      }
+                    }
+                  },
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.primary,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
             ),
-            icon: const Icon(Icons.check_circle, size: 22),
-            label: Text(
-              'Create Due',
-              style: AppTypography.labelLarge.copyWith(
-                color: AppColors.onPrimary,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+            icon: _isSubmitting
+                ? const SizedBox.shrink()
+                : const Icon(Icons.check_circle, size: 22),
+            label: _isSubmitting
+                ? const SizedBox(
+                    height: 22,
+                    width: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : Text(
+                    'Create Due',
+                    style: AppTypography.labelLarge.copyWith(
+                      color: AppColors.onPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
           ),
         ),
       ),

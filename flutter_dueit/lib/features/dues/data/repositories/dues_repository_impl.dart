@@ -1,214 +1,162 @@
-import 'package:uuid/uuid.dart';
+import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../domain/entities/due_entity.dart';
 import '../../domain/entities/payment_record_entity.dart';
 import '../../domain/repositories/dues_repository.dart';
 
 class DuesRepositoryImpl implements DuesRepository {
-  static String _todayStr() {
-    final now = DateTime.now();
-    return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+  final FirebaseFirestore _firestore;
+
+  DuesRepositoryImpl({FirebaseFirestore? firestore})
+      : _firestore = firestore ?? FirebaseFirestore.instance;
+
+  CollectionReference<Map<String, dynamic>> _duesCollection(String ownerId) {
+    return _firestore.collection('users').doc(ownerId).collection('dues');
   }
-
-  static String _offsetDateStr(int days) {
-    final d = DateTime.now().add(Duration(days: days));
-    return '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
-  }
-
-  final List<DueEntity> _dues = [
-    // Today's Dues (5 payments = ₹8,500)
-    DueEntity(
-      id: 'due_1',
-      customerId: 'cust_1',
-      customerName: 'Rahul Kumar',
-      amount: 1500,
-      paidAmount: 0,
-      description: 'August Karate Fee',
-      dueDate: _todayStr(),
-      status: DueStatus.due,
-      recurrence: RecurrenceType.monthly,
-    ),
-    DueEntity(
-      id: 'due_2',
-      customerId: 'cust_2',
-      customerName: 'Arjun Sharma',
-      amount: 2000,
-      paidAmount: 0,
-      description: 'Monthly Membership',
-      dueDate: _todayStr(),
-      status: DueStatus.due,
-      recurrence: RecurrenceType.monthly,
-    ),
-    DueEntity(
-      id: 'due_3',
-      customerId: 'cust_5',
-      customerName: 'Pooja Sharma',
-      amount: 1800,
-      paidAmount: 0,
-      description: 'Yoga Monthly Pass',
-      dueDate: _todayStr(),
-      status: DueStatus.due,
-      recurrence: RecurrenceType.monthly,
-    ),
-    DueEntity(
-      id: 'due_4',
-      customerId: 'cust_6',
-      customerName: 'Amitabh Sen',
-      amount: 1700,
-      paidAmount: 0,
-      description: 'Karate Training',
-      dueDate: _todayStr(),
-      status: DueStatus.due,
-      recurrence: RecurrenceType.monthly,
-    ),
-    DueEntity(
-      id: 'due_5',
-      customerId: 'cust_1',
-      customerName: 'Ritu Verma',
-      amount: 1500,
-      paidAmount: 0,
-      description: 'Music Class',
-      dueDate: _todayStr(),
-      status: DueStatus.due,
-      recurrence: RecurrenceType.monthly,
-    ),
-
-    // Overdue Dues (₹4,000)
-    DueEntity(
-      id: 'due_6',
-      customerId: 'cust_4',
-      customerName: 'Vikram Rao',
-      amount: 2500,
-      paidAmount: 0,
-      description: 'Monthly Training',
-      dueDate: _offsetDateStr(-5),
-      status: DueStatus.overdue,
-      recurrence: RecurrenceType.monthly,
-    ),
-    DueEntity(
-      id: 'due_7',
-      customerId: 'cust_3',
-      customerName: 'Sneha Reddy',
-      amount: 1500,
-      paidAmount: 0,
-      description: 'Karate Uniform & Gear',
-      dueDate: _offsetDateStr(-8),
-      status: DueStatus.overdue,
-      recurrence: RecurrenceType.none,
-    ),
-
-    // Upcoming Dues (₹18,500)
-    DueEntity(
-      id: 'due_8',
-      customerId: 'cust_1',
-      customerName: 'Rahul Kumar',
-      amount: 1500,
-      paidAmount: 0,
-      description: 'September Karate Fee',
-      dueDate: _offsetDateStr(5),
-      status: DueStatus.upcoming,
-      recurrence: RecurrenceType.monthly,
-    ),
-    DueEntity(
-      id: 'due_9',
-      customerId: 'cust_2',
-      customerName: 'Amit Shah',
-      amount: 5000,
-      paidAmount: 0,
-      description: 'Quarterly Coaching',
-      dueDate: _offsetDateStr(10),
-      status: DueStatus.upcoming,
-      recurrence: RecurrenceType.monthly,
-    ),
-    DueEntity(
-      id: 'due_10',
-      customerId: 'cust_4',
-      customerName: 'Priya Nair',
-      amount: 4500,
-      paidAmount: 0,
-      description: '3-Month Gym Membership',
-      dueDate: _offsetDateStr(14),
-      status: DueStatus.upcoming,
-      recurrence: RecurrenceType.monthly,
-    ),
-    DueEntity(
-      id: 'due_11',
-      customerId: 'cust_5',
-      customerName: 'Deepak Joshi',
-      amount: 7500,
-      paidAmount: 0,
-      description: 'Annual Access Pass',
-      dueDate: _offsetDateStr(20),
-      status: DueStatus.upcoming,
-      recurrence: RecurrenceType.monthly,
-    ),
-
-    // Paid Dues
-    DueEntity(
-      id: 'due_12',
-      customerId: 'cust_3',
-      customerName: 'Sneha Reddy',
-      amount: 1500,
-      paidAmount: 1500,
-      description: 'August Tuition',
-      dueDate: _offsetDateStr(-10),
-      status: DueStatus.paid,
-      paidAt: _offsetDateStr(-9),
-      paymentMethod: 'UPI',
-    ),
-  ];
-
-  final List<PaymentRecordEntity> _payments = [
-    PaymentRecordEntity(
-      id: 'pay_init_1',
-      dueId: 'due_12',
-      customerId: 'cust_3',
-      customerName: 'Sneha Reddy',
-      amount: 1500,
-      paymentMethod: PaymentMethod.upi,
-      paidAt:
-          DateTime.now().subtract(const Duration(days: 9)).toIso8601String(),
-      receiptNumber: 'REC-2026-0012',
-      notes: 'Settled via UPI',
-    ),
-  ];
 
   @override
-  Future<List<DueEntity>> getDues() async {
-    return List.unmodifiable(_dues);
+  Stream<List<DueEntity>> watchDues(String ownerId) {
+    if (ownerId.isEmpty) {
+      return Stream.value([]);
+    }
+
+    try {
+      return _duesCollection(ownerId)
+          .orderBy('updatedAt', descending: true)
+          .snapshots()
+          .map((snapshot) {
+        return snapshot.docs.map((doc) {
+          return DueEntity.fromMap(doc.data(), docId: doc.id);
+        }).toList();
+      }).handleError((error) {
+        return <DueEntity>[];
+      });
+    } catch (_) {
+      return Stream.value([]);
+    }
+  }
+
+  @override
+  Future<List<DueEntity>> getDues(String ownerId) async {
+    if (ownerId.isEmpty) return [];
+    try {
+      final snapshot = await _duesCollection(ownerId)
+          .orderBy('updatedAt', descending: true)
+          .get();
+      return snapshot.docs.map((doc) {
+        return DueEntity.fromMap(doc.data(), docId: doc.id);
+      }).toList();
+    } catch (e) {
+      throw Exception(_mapFirestoreError(e));
+    }
+  }
+
+  @override
+  Future<DueEntity?> getDue({
+    required String ownerId,
+    required String dueId,
+  }) async {
+    if (ownerId.isEmpty || dueId.isEmpty) return null;
+    try {
+      final doc = await _duesCollection(ownerId).doc(dueId).get();
+      if (!doc.exists || doc.data() == null) return null;
+      return DueEntity.fromMap(doc.data()!, docId: doc.id);
+    } catch (e) {
+      throw Exception(_mapFirestoreError(e));
+    }
   }
 
   @override
   Future<DueEntity> createDue(DueEntity due) async {
-    _dues.insert(0, due);
-    return due;
+    if (due.ownerId.isEmpty) {
+      throw Exception('Cannot create due without authenticated owner.');
+    }
+    if (due.amount <= 0) {
+      throw Exception('Due amount must be greater than zero.');
+    }
+    if (due.customerId.isEmpty) {
+      throw Exception('Customer must be selected for due.');
+    }
+
+    try {
+      final collection = _duesCollection(due.ownerId);
+      final docRef =
+          due.id.isNotEmpty ? collection.doc(due.id) : collection.doc();
+
+      final now = DateTime.now();
+      final dueToSave = due.copyWith(
+        id: docRef.id,
+        createdAt: now,
+        updatedAt: now,
+      );
+
+      await docRef.set(dueToSave.toMap());
+      return dueToSave;
+    } catch (e) {
+      throw Exception(_mapFirestoreError(e));
+    }
   }
 
   @override
   Future<DueEntity> updateDue(DueEntity due) async {
-    final index = _dues.indexWhere((d) => d.id == due.id);
-    if (index != -1) {
-      _dues[index] = due;
+    if (due.ownerId.isEmpty || due.id.isEmpty) {
+      throw Exception('Due identification missing.');
     }
-    return due;
-  }
+    if (due.amount <= 0) {
+      throw Exception('Due amount must be greater than zero.');
+    }
 
-  @override
-  Future<void> deleteDue(String id) async {
-    _dues.removeWhere((d) => d.id == id);
-    _payments.removeWhere((p) => p.dueId == id);
-  }
-
-  @override
-  Future<void> cancelDue(String id) async {
-    final index = _dues.indexWhere((d) => d.id == id);
-    if (index != -1) {
-      _dues[index] = _dues[index].copyWith(status: DueStatus.cancelled);
+    try {
+      final now = DateTime.now();
+      final updatedDue = due.copyWith(
+        updatedAt: now,
+      );
+      await _duesCollection(due.ownerId)
+          .doc(due.id)
+          .set(updatedDue.toMap(), SetOptions(merge: true));
+      return updatedDue;
+    } catch (e) {
+      throw Exception(_mapFirestoreError(e));
     }
   }
 
   @override
-  Future<List<PaymentRecordEntity>> getPayments() async {
-    return List.unmodifiable(_payments);
+  Future<void> deleteDue({
+    required String ownerId,
+    required String dueId,
+  }) async {
+    if (ownerId.isEmpty || dueId.isEmpty) {
+      throw Exception('Due identification missing for deletion.');
+    }
+    try {
+      await _duesCollection(ownerId).doc(dueId).delete();
+    } catch (e) {
+      throw Exception(_mapFirestoreError(e));
+    }
+  }
+
+  @override
+  Future<void> cancelDue({
+    required String ownerId,
+    required String dueId,
+  }) async {
+    if (ownerId.isEmpty || dueId.isEmpty) {
+      throw Exception('Due identification missing for cancellation.');
+    }
+    try {
+      await _duesCollection(ownerId).doc(dueId).update({
+        'status': DueStatus.cancelled.name,
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      throw Exception(_mapFirestoreError(e));
+    }
+  }
+
+  @override
+  Future<List<PaymentRecordEntity>> getPayments([String? ownerId]) async {
+    // Payments feature ledger placeholder for Step 7
+    return [];
   }
 
   @override
@@ -218,41 +166,25 @@ class DuesRepositoryImpl implements DuesRepository {
     required PaymentMethod paymentMethod,
     String? notes,
   }) async {
-    final index = _dues.indexWhere((d) => d.id == dueId);
-    if (index == -1) {
-      throw Exception('Due not found with id: $dueId');
+    throw UnimplementedError('Payment recording is scheduled for Step 7.');
+  }
+
+  String _mapFirestoreError(Object error) {
+    if (error is FirebaseException) {
+      switch (error.code) {
+        case 'permission-denied':
+          return 'Permission denied. Please verify your login status.';
+        case 'unavailable':
+          return 'Firestore is temporarily unavailable. Please check your connection.';
+        default:
+          return error.message ??
+              'A database error occurred. Please try again.';
+      }
     }
-
-    final targetDue = _dues[index];
-    final newPaidAmount = targetDue.paidAmount + amount;
-    final isFullyPaid = newPaidAmount >= targetDue.amount;
-    final now = DateTime.now();
-
-    final receiptNumber =
-        'REC-${now.year}-${(1000 + (now.millisecondsSinceEpoch % 9000))}';
-
-    final record = PaymentRecordEntity(
-      id: 'pay_${const Uuid().v4().substring(0, 8)}',
-      dueId: dueId,
-      customerId: targetDue.customerId,
-      customerName: targetDue.customerName,
-      amount: amount,
-      paymentMethod: paymentMethod,
-      paidAt: now.toIso8601String(),
-      receiptNumber: receiptNumber,
-      notes: notes,
-    );
-
-    _payments.insert(0, record);
-
-    // Update target due
-    _dues[index] = targetDue.copyWith(
-      paidAmount: newPaidAmount,
-      status: isFullyPaid ? DueStatus.paid : DueStatus.partiallyPaid,
-      paidAt: isFullyPaid ? now.toIso8601String() : targetDue.paidAt,
-      paymentMethod: paymentMethod.displayName,
-    );
-
-    return record;
+    var msg = error.toString();
+    if (msg.startsWith('Exception: ')) {
+      msg = msg.substring(11);
+    }
+    return msg;
   }
 }
