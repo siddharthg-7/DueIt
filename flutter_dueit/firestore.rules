@@ -20,35 +20,31 @@ service cloud.firestore {
 
       // Customers Subcollection (Strictly isolated to authenticated business owner)
       match /customers/{customerId} {
-        // Read: Only the authenticated owner can read
         allow read: if isOwner(userId);
-
-        // Create: Must be the owner, and if ownerId is passed it must match authenticated UID
         allow create: if isOwner(userId)
           && (!('ownerId' in request.resource.data) || request.resource.data.ownerId == userId);
-
-        // Update: Must be the owner, and ownerId cannot be transferred or changed to another UID
         allow update: if isOwner(userId)
           && (!('ownerId' in request.resource.data) || request.resource.data.ownerId == resource.data.ownerId || request.resource.data.ownerId == userId);
-
-        // Delete: Only the authenticated owner can delete
         allow delete: if isOwner(userId);
       }
 
       // Dues Subcollection (Strictly isolated to authenticated business owner)
       match /dues/{dueId} {
-        // Read: Only the authenticated owner can read
         allow read: if isOwner(userId);
-
-        // Create: Must be the owner, and if ownerId is passed it must match authenticated UID
         allow create: if isOwner(userId)
           && (!('ownerId' in request.resource.data) || request.resource.data.ownerId == userId);
-
-        // Update: Must be the owner, and ownerId cannot be transferred or changed to another UID
         allow update: if isOwner(userId)
           && (!('ownerId' in request.resource.data) || request.resource.data.ownerId == resource.data.ownerId || request.resource.data.ownerId == userId);
+        allow delete: if isOwner(userId);
+      }
 
-        // Delete: Only the authenticated owner can delete
+      // Payments Subcollection (Strictly isolated to authenticated business owner)
+      match /payments/{paymentId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && (!('ownerId' in request.resource.data) || request.resource.data.ownerId == userId);
+        allow update: if isOwner(userId)
+          && (!('ownerId' in request.resource.data) || request.resource.data.ownerId == resource.data.ownerId || request.resource.data.ownerId == userId);
         allow delete: if isOwner(userId);
       }
     }

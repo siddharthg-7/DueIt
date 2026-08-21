@@ -20,8 +20,16 @@ abstract class DateFormatter {
     return formatIsoDate(DateTime.now());
   }
 
+  static String tomorrowIsoDate() {
+    return formatIsoDate(DateTime.now().add(const Duration(days: 1)));
+  }
+
   static bool isToday(String isoDate) {
     return isoDate == todayIsoDate();
+  }
+
+  static bool isTomorrow(String isoDate) {
+    return isoDate == tomorrowIsoDate();
   }
 
   static bool isBeforeToday(String isoDate) {

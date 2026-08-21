@@ -18,7 +18,19 @@ import 'package:dueit/features/reminders/presentation/screens/notifications_scre
 import 'package:dueit/features/settings/presentation/screens/settings_screen.dart';
 import 'route_names.dart';
 
-final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
+
+/// Deep link helper to navigate to Due Details when a notification is tapped
+void navigateToDue(String dueId) {
+  final context = rootNavigatorKey.currentContext;
+  if (context != null) {
+    try {
+      GoRouter.of(context).push('/due/$dueId');
+    } catch (e) {
+      debugPrint('Navigation error on notification tap: $e');
+    }
+  }
+}
 
 /// Centralized route guard pure function evaluating redirect destination
 String? appRouteGuard({
@@ -71,7 +83,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   final authNotifier = ref.watch(authStateListenableProvider);
 
   return GoRouter(
-    navigatorKey: _rootNavigatorKey,
+    navigatorKey: rootNavigatorKey,
     initialLocation: RouteNames.splash,
     refreshListenable: authNotifier,
     redirect: (context, state) {
@@ -171,7 +183,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // Standalone & Drilldown Sub-Routes
       GoRoute(
         path: RouteNames.customerDetails,
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) {
           final id = state.pathParameters['id'] ?? '';
           return CustomerDetailsScreen(customerId: id);
@@ -179,7 +191,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: RouteNames.dueDetails,
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) {
           final id = state.pathParameters['id'] ?? '';
           return DueDetailsScreen(dueId: id);
@@ -187,7 +199,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: RouteNames.addDue,
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) {
           final customerId = state.uri.queryParameters['customerId'];
           return AddDueScreen(preselectedCustomerId: customerId);
@@ -195,12 +207,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: RouteNames.notifications,
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const NotificationsScreen(),
       ),
       GoRoute(
         path: RouteNames.settings,
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const SettingsScreen(),
       ),
     ],

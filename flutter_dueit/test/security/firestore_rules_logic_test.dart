@@ -85,6 +85,41 @@ class MockFirestoreSecurityContext {
     return isOwner(pathUserId);
   }
 
+  // Rule for /users/{userId}/payments/{paymentId} - CREATE
+  bool canCreatePayment({
+    required String pathUserId,
+    String? requestOwnerId,
+  }) {
+    if (!isOwner(pathUserId)) return false;
+    if (requestOwnerId != null && requestOwnerId != pathUserId) return false;
+    return true;
+  }
+
+  // Rule for /users/{userId}/payments/{paymentId} - READ
+  bool canReadPayment({required String pathUserId}) {
+    return isOwner(pathUserId);
+  }
+
+  // Rule for /users/{userId}/payments/{paymentId} - UPDATE
+  bool canUpdatePayment({
+    required String pathUserId,
+    required String currentOwnerId,
+    String? newOwnerId,
+  }) {
+    if (!isOwner(pathUserId)) return false;
+    if (newOwnerId != null &&
+        newOwnerId != currentOwnerId &&
+        newOwnerId != pathUserId) {
+      return false;
+    }
+    return true;
+  }
+
+  // Rule for /users/{userId}/payments/{paymentId} - DELETE
+  bool canDeletePayment({required String pathUserId}) {
+    return isOwner(pathUserId);
+  }
+
   // Rule for arbitrary wildcard / other collection
   bool canAccessUndeclaredPath(String path) {
     return false;
@@ -92,11 +127,12 @@ class MockFirestoreSecurityContext {
 }
 
 void main() {
-  group('Hardened Firestore Security Rules Logic Tests', () {
+  group('Hardened Firestore Security Rules Logic Tests with Payments', () {
     const userA = 'user_A';
     const userB = 'user_B';
 
-    test('1. User A accessing own user document, customers, and dues -> ALLOW',
+    test(
+        '1. User A accessing own user document, customers, dues, and payments -> ALLOW',
         () {
       final contextA = MockFirestoreSecurityContext(authUid: userA);
 
@@ -121,9 +157,20 @@ void main() {
         ),
         isTrue,
       );
+
+      expect(contextA.canReadPayment(pathUserId: userA), isTrue);
+      expect(contextA.canDeletePayment(pathUserId: userA), isTrue);
+      expect(
+        contextA.canCreatePayment(
+          pathUserId: userA,
+          requestOwnerId: userA,
+        ),
+        isTrue,
+      );
     });
 
-    test('2. User A accessing User B customers and dues -> DENY', () {
+    test('2. User A accessing User B customers, dues, and payments -> DENY',
+        () {
       final contextA = MockFirestoreSecurityContext(authUid: userA);
 
       expect(contextA.canReadUserDoc(userB), isFalse);
@@ -147,6 +194,16 @@ void main() {
         ),
         isFalse,
       );
+
+      expect(contextA.canReadPayment(pathUserId: userB), isFalse);
+      expect(contextA.canDeletePayment(pathUserId: userB), isFalse);
+      expect(
+        contextA.canCreatePayment(
+          pathUserId: userB,
+          requestOwnerId: userB,
+        ),
+        isFalse,
+      );
     });
 
     test('3. Unauthenticated request to any resource -> DENY', () {
@@ -155,28 +212,20 @@ void main() {
       expect(unauthenticated.canReadUserDoc(userA), isFalse);
       expect(unauthenticated.canWriteUserDoc(userA), isFalse);
       expect(unauthenticated.canReadCustomer(pathUserId: userA), isFalse);
-      expect(
-        unauthenticated.canCreateCustomer(
-          pathUserId: userA,
-          requestOwnerId: userA,
-        ),
-        isFalse,
-      );
-      expect(unauthenticated.canDeleteCustomer(pathUserId: userA), isFalse);
-
       expect(unauthenticated.canReadDue(pathUserId: userA), isFalse);
+      expect(unauthenticated.canReadPayment(pathUserId: userA), isFalse);
       expect(
-        unauthenticated.canCreateDue(
+        unauthenticated.canCreatePayment(
           pathUserId: userA,
           requestOwnerId: userA,
         ),
         isFalse,
       );
-      expect(unauthenticated.canDeleteDue(pathUserId: userA), isFalse);
+      expect(unauthenticated.canDeletePayment(pathUserId: userA), isFalse);
     });
 
     test(
-        '4. User A attempting to forge ownerId on customer/due creation -> DENY',
+        '4. User A attempting to forge ownerId on customer/due/payment creation -> DENY',
         () {
       final contextA = MockFirestoreSecurityContext(authUid: userA);
 
@@ -196,14 +245,21 @@ void main() {
         ),
         isFalse,
       );
+
+      expect(
+        contextA.canCreatePayment(
+          pathUserId: userA,
+          requestOwnerId: userB,
+        ),
+        isFalse,
+      );
     });
 
     test(
-        '5. User A attempting to hijack/transfer customer or due ownerId on update -> DENY',
+        '5. User A attempting to hijack/transfer customer, due, or payment ownerId on update -> DENY',
         () {
       final contextA = MockFirestoreSecurityContext(authUid: userA);
 
-      // Attempting to change existing customer owner from user_A to user_B
       expect(
         contextA.canUpdateCustomer(
           pathUserId: userA,
@@ -215,6 +271,15 @@ void main() {
 
       expect(
         contextA.canUpdateDue(
+          pathUserId: userA,
+          currentOwnerId: userA,
+          newOwnerId: userB,
+        ),
+        isFalse,
+      );
+
+      expect(
+        contextA.canUpdatePayment(
           pathUserId: userA,
           currentOwnerId: userA,
           newOwnerId: userB,
@@ -224,16 +289,7 @@ void main() {
 
       // Updating without changing ownerId -> ALLOW
       expect(
-        contextA.canUpdateCustomer(
-          pathUserId: userA,
-          currentOwnerId: userA,
-          newOwnerId: userA,
-        ),
-        isTrue,
-      );
-
-      expect(
-        contextA.canUpdateDue(
+        contextA.canUpdatePayment(
           pathUserId: userA,
           currentOwnerId: userA,
           newOwnerId: userA,

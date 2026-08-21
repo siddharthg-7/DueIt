@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../domain/entities/due_entity.dart';
 import '../../domain/entities/payment_record_entity.dart';
 import '../../domain/repositories/dues_repository.dart';
+import '../../domain/services/due_payment_calculator.dart';
 
 class DuesRepositoryImpl implements DuesRepository {
   final FirebaseFirestore _firestore;
@@ -12,6 +13,11 @@ class DuesRepositoryImpl implements DuesRepository {
 
   CollectionReference<Map<String, dynamic>> _duesCollection(String ownerId) {
     return _firestore.collection('users').doc(ownerId).collection('dues');
+  }
+
+  CollectionReference<Map<String, dynamic>> _paymentsCollection(
+      String ownerId) {
+    return _firestore.collection('users').doc(ownerId).collection('payments');
   }
 
   @override
@@ -28,7 +34,7 @@ class DuesRepositoryImpl implements DuesRepository {
         return snapshot.docs.map((doc) {
           return DueEntity.fromMap(doc.data(), docId: doc.id);
         }).toList();
-      }).handleError((error) {
+      }).handleError((_) {
         return <DueEntity>[];
       });
     } catch (_) {
@@ -153,20 +159,121 @@ class DuesRepositoryImpl implements DuesRepository {
     }
   }
 
+  // ==========================================
+  // Payments Subcollection: users/{uid}/payments
+  // ==========================================
+
   @override
-  Future<List<PaymentRecordEntity>> getPayments([String? ownerId]) async {
-    // Payments feature ledger placeholder for Step 7
-    return [];
+  Stream<List<PaymentRecordEntity>> watchPayments(String ownerId) {
+    if (ownerId.isEmpty) {
+      return Stream.value([]);
+    }
+
+    try {
+      return _paymentsCollection(ownerId)
+          .orderBy('createdAt', descending: true)
+          .snapshots()
+          .map((snapshot) {
+        return snapshot.docs.map((doc) {
+          return PaymentRecordEntity.fromMap(doc.data(), docId: doc.id);
+        }).toList();
+      }).handleError((_) {
+        return <PaymentRecordEntity>[];
+      });
+    } catch (_) {
+      return Stream.value([]);
+    }
   }
 
   @override
-  Future<PaymentRecordEntity> recordPayment({
-    required String dueId,
-    required double amount,
-    required PaymentMethod paymentMethod,
-    String? notes,
+  Future<List<PaymentRecordEntity>> getPayments([String? ownerId]) async {
+    if (ownerId == null || ownerId.isEmpty) return [];
+    try {
+      final snapshot = await _paymentsCollection(ownerId)
+          .orderBy('createdAt', descending: true)
+          .get();
+      return snapshot.docs.map((doc) {
+        return PaymentRecordEntity.fromMap(doc.data(), docId: doc.id);
+      }).toList();
+    } catch (e) {
+      throw Exception(_mapFirestoreError(e));
+    }
+  }
+
+  @override
+  Future<PaymentRecordEntity> recordPayment(PaymentRecordEntity payment) async {
+    if (payment.ownerId.isEmpty) {
+      throw Exception('Cannot record payment without authenticated owner.');
+    }
+    if (payment.amount <= 0) {
+      throw Exception('Please enter a valid amount greater than ₹0.');
+    }
+    if (payment.dueId.isEmpty) {
+      throw Exception('Payment must be associated with a due record.');
+    }
+
+    try {
+      // 1. Verify Due exists and belongs to owner
+      final dueDoc =
+          await _duesCollection(payment.ownerId).doc(payment.dueId).get();
+      if (!dueDoc.exists || dueDoc.data() == null) {
+        throw Exception('Associated due record not found.');
+      }
+      final due = DueEntity.fromMap(dueDoc.data()!, docId: dueDoc.id);
+
+      if (due.isCancelled) {
+        throw Exception('Cannot record payment for a cancelled due.');
+      }
+
+      // 2. Fetch existing payments for this due to verify remaining amount
+      final existingPaymentsSnapshot =
+          await _paymentsCollection(payment.ownerId)
+              .where('dueId', isEqualTo: payment.dueId)
+              .get();
+      final existingPayments = existingPaymentsSnapshot.docs
+          .map((doc) => PaymentRecordEntity.fromMap(doc.data(), docId: doc.id))
+          .toList();
+
+      final totalPaidAlready =
+          DuePaymentCalculator.calculateTotalPaid(due.id, existingPayments);
+      final remaining =
+          DuePaymentCalculator.calculateRemaining(due.amount, totalPaidAlready);
+
+      if (payment.amount > remaining + 0.001) {
+        throw Exception('Payment cannot be greater than the remaining amount.');
+      }
+
+      // 3. Save payment record
+      final docRef = payment.id.isNotEmpty
+          ? _paymentsCollection(payment.ownerId).doc(payment.id)
+          : _paymentsCollection(payment.ownerId).doc();
+
+      final now = DateTime.now();
+      final paymentToSave = payment.copyWith(
+        id: docRef.id,
+        createdAt: now,
+      );
+
+      await docRef.set(paymentToSave.toMap());
+      return paymentToSave;
+    } catch (e) {
+      throw Exception(_mapFirestoreError(e));
+    }
+  }
+
+  @override
+  Future<void> deletePayment({
+    required String ownerId,
+    required String paymentId,
   }) async {
-    throw UnimplementedError('Payment recording is scheduled for Step 7.');
+    if (ownerId.isEmpty || paymentId.isEmpty) {
+      throw Exception('Payment identification missing for deletion.');
+    }
+    try {
+      await _paymentsCollection(ownerId).doc(paymentId).delete();
+    } catch (e) {
+      throw Exception(_mapFirestoreError(e));
+    }
   }
 
   String _mapFirestoreError(Object error) {

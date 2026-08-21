@@ -83,19 +83,28 @@ enum RecurrenceType {
 }
 
 enum ReminderType {
+  none,
   onDueDate,
   oneDayBefore,
+  twoDaysBefore,
   threeDaysBefore,
+  sevenDaysBefore,
   daily;
 
   String get displayName {
     switch (this) {
+      case ReminderType.none:
+        return 'None';
       case ReminderType.onDueDate:
         return 'On Due Date';
       case ReminderType.oneDayBefore:
         return '1 Day Before';
+      case ReminderType.twoDaysBefore:
+        return '2 Days Before';
       case ReminderType.threeDaysBefore:
         return '3 Days Before';
+      case ReminderType.sevenDaysBefore:
+        return '1 Week Before';
       case ReminderType.daily:
         return 'Daily';
     }
@@ -103,16 +112,26 @@ enum ReminderType {
 
   static ReminderType fromString(String? val) {
     if (val == null) return ReminderType.oneDayBefore;
-    switch (val.toLowerCase()) {
+    switch (val.toLowerCase().trim()) {
+      case 'none':
+        return ReminderType.none;
       case 'on_due_date':
       case 'on due date':
         return ReminderType.onDueDate;
       case 'one_day_before':
       case '1 day before':
         return ReminderType.oneDayBefore;
+      case 'two_days_before':
+      case '2 days before':
+        return ReminderType.twoDaysBefore;
       case 'three_days_before':
       case '3 days before':
         return ReminderType.threeDaysBefore;
+      case 'seven_days_before':
+      case '7 days before':
+      case '1 week before':
+      case 'one_week_before':
+        return ReminderType.sevenDaysBefore;
       case 'daily':
         return ReminderType.daily;
       default:

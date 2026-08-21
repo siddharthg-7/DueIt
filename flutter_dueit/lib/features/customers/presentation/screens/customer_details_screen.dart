@@ -270,11 +270,11 @@ class CustomerDetailsScreen extends ConsumerWidget {
 
   void _confirmDeleteCustomer(
       BuildContext context, WidgetRef ref, CustomerEntity customer) {
-    final hasActiveDues = ref
+    final hasFinancialRecords = ref
         .read(duesControllerProvider.notifier)
-        .hasActiveDuesForCustomer(customer.id);
+        .hasFinancialRecordsForCustomer(customer.id);
 
-    if (hasActiveDues) {
+    if (hasFinancialRecords) {
       showDialog(
         context: context,
         builder: (dialogCtx) => AlertDialog(
@@ -286,7 +286,7 @@ class CustomerDetailsScreen extends ConsumerWidget {
                 AppTypography.titleMedium.copyWith(fontWeight: FontWeight.bold),
           ),
           content: Text(
-            '${customer.name} has active payments due. Please resolve or cancel those dues before deleting this customer.',
+            '${customer.name} has payment records and cannot be deleted.',
             style: AppTypography.bodyMedium,
           ),
           actions: [
@@ -725,7 +725,7 @@ class CustomerDetailsScreen extends ConsumerWidget {
                                   color: AppColors.primary,
                                   fontWeight: FontWeight.w700)),
                           Text(
-                            '${DateFormatter.formatDisplayDate(DateTime.parse(p.paidAt))} • ${p.paymentMethod.displayName}',
+                            '${DateFormatter.formatDisplayDate(DateFormatter.parseLocalDate(p.paidAt))} • ${p.paymentMethod.displayName}',
                             style: AppTypography.bodySmall,
                           ),
                         ],

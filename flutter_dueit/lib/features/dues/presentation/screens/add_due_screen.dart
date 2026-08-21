@@ -69,18 +69,7 @@ class _AddDueScreenState extends ConsumerState<AddDueScreen> {
   }
 
   ReminderType _getReminderType(String val) {
-    switch (val.toLowerCase()) {
-      case 'on due date':
-        return ReminderType.onDueDate;
-      case '3 days before':
-        return ReminderType.threeDaysBefore;
-      case 'daily':
-        return ReminderType.daily;
-      case 'none':
-        return ReminderType.onDueDate;
-      default:
-        return ReminderType.oneDayBefore;
-    }
+    return ReminderType.fromString(val);
   }
 
   @override
@@ -430,6 +419,16 @@ class _AddDueScreenState extends ConsumerState<AddDueScreen> {
                     setState(() => _isSubmitting = false);
                     if (created != null) {
                       if (context.mounted) {
+                        final hasReminder = created.reminderEnabled &&
+                            created.reminderType != ReminderType.none;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(hasReminder
+                                ? 'Due added. Reminder scheduled.'
+                                : 'Due added successfully.'),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
                         context.pop();
                       }
                     } else {

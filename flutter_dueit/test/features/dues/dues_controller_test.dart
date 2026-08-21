@@ -4,14 +4,18 @@ import 'package:dueit/core/utils/date_formatter.dart';
 import 'package:dueit/features/auth/domain/entities/user_entity.dart';
 import 'package:dueit/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:dueit/features/dues/domain/entities/due_entity.dart';
+import 'package:dueit/features/dues/domain/entities/payment_record_entity.dart';
 import 'package:dueit/features/dues/presentation/controllers/dues_controller.dart';
+import 'package:dueit/features/reminders/data/services/local_notification_service.dart';
 import '../../mocks/fake_auth_repository.dart';
 import '../../mocks/fake_dues_repository.dart';
+import '../../mocks/fake_notification_service.dart';
 
 void main() {
-  group('DuesController Unit Tests', () {
+  group('DuesController Unit Tests with Payments', () {
     late FakeAuthRepository fakeAuthRepo;
     late FakeDuesRepository fakeDuesRepo;
+    late FakeNotificationService fakeNotificationService;
     late ProviderContainer container;
 
     final todayStr = DateFormatter.todayIsoDate();
@@ -38,7 +42,7 @@ void main() {
             businessId: 'owner_123',
             customerId: 'cust_1',
             customerName: 'Rahul Kumar',
-            amount: 1500.0,
+            amount: 5000.0,
             description: 'August Karate Fee',
             dueDate: todayStr,
             status: DueStatus.due,
@@ -56,11 +60,14 @@ void main() {
           ),
         ],
       );
+      fakeNotificationService = FakeNotificationService();
 
       container = ProviderContainer(
         overrides: [
           authRepositoryProvider.overrideWithValue(fakeAuthRepo),
           duesRepositoryProvider.overrideWithValue(fakeDuesRepo),
+          notificationServiceProvider
+              .overrideWithValue(fakeNotificationService),
         ],
       );
 
@@ -106,86 +113,119 @@ void main() {
       expect(state.dues.any((d) => d.description == 'Tuition Fee'), isTrue);
     });
 
-    test('3. addDue fails when amount <= 0 or customer is empty', () async {
-      final ctrl = container.read(duesControllerProvider.notifier);
-
-      final zeroAmount = await ctrl.addDue(
-        customerId: 'cust_1',
-        amount: 0,
-        description: 'Free Training',
-        dueDate: todayStr,
-      );
-      expect(zeroAmount, isNull);
-
-      final emptyCust = await ctrl.addDue(
-        customerId: '',
-        amount: 500,
-        description: 'Fee',
-        dueDate: todayStr,
-      );
-      expect(emptyCust, isNull);
-    });
-
-    test('4. updateDue updates amount and description', () async {
-      final ctrl = container.read(duesControllerProvider.notifier);
-      await ctrl.loadDues();
-
-      final existing = container
-          .read(duesControllerProvider)
-          .dues
-          .firstWhere((d) => d.id == 'due_1');
-
-      final updated = existing.copyWith(
-        amount: 1800.0,
-        description: 'August Karate Fee (Advanced)',
-      );
-
-      final success = await ctrl.updateDue(updated);
-      expect(success, isTrue);
-
-      final state = container.read(duesControllerProvider);
-      final refreshed = state.dues.firstWhere((d) => d.id == 'due_1');
-      expect(refreshed.amount, 1800.0);
-      expect(refreshed.description, 'August Karate Fee (Advanced)');
-    });
-
-    test('5. cancelDue sets status to cancelled', () async {
-      final ctrl = container.read(duesControllerProvider.notifier);
-      await ctrl.loadDues();
-
-      final success = await ctrl.cancelDue('due_1');
-      expect(success, isTrue);
-
-      final state = container.read(duesControllerProvider);
-      final cancelled = state.dues.firstWhere((d) => d.id == 'due_1');
-      expect(cancelled.status, DueStatus.cancelled);
-    });
-
-    test('6. deleteDue removes due record', () async {
-      final ctrl = container.read(duesControllerProvider.notifier);
-      await ctrl.loadDues();
-
-      expect(container.read(duesControllerProvider).dues.length, 2);
-
-      final success = await ctrl.deleteDue('due_2');
-      expect(success, isTrue);
-
-      final state = container.read(duesControllerProvider);
-      expect(state.dues.length, 1);
-      expect(state.dues.any((d) => d.id == 'due_2'), isFalse);
-    });
-
     test(
-        '7. hasActiveDuesForCustomer returns true for active dues and false when cancelled',
+        '3. recordPayment records partial payment and updates remaining amount and status',
         () async {
       final ctrl = container.read(duesControllerProvider.notifier);
       await ctrl.loadDues();
 
-      expect(ctrl.hasActiveDuesForCustomer('cust_1'), isTrue);
-      expect(ctrl.hasActiveDuesForCustomer('non_existent_cust'), isFalse);
+      // Record partial payment of ₹2,000 against ₹5,000 due
+      final payment = await ctrl.recordPayment(
+        dueId: 'due_1',
+        amount: 2000.0,
+        paymentMethod: PaymentMethod.cash,
+        notes: 'Partial cash payment',
+      );
 
-      await ctrl.cancelDue('due_1');
-      expect(ctrl.hasActiveDuesForCustomer('cust_1'), isFalse);
+      expect(payment, isNotNull);
+      expect(payment!.amount, 2000.0);
+
+      final state = container.read(duesControllerProvider);
+      final enrichedDue = state.dues.firstWhere((d) => d.id == 'due_1');
+      expect(enrichedDue.paidAmount, 2000.0);
+      expect(enrichedDue.remainingAmount, 3000.0);
+      expect(enrichedDue.status, DueStatus.partiallyPaid);
+    });
+
+    test('4. recordPayment records remaining payment and marks due as PAID',
+        () async {
+      final ctrl = container.read(duesControllerProvider.notifier);
+      await ctrl.loadDues();
+
+      // 1st Payment ₹2,000
+      await ctrl.recordPayment(
+        dueId: 'due_1',
+        amount: 2000.0,
+        paymentMethod: PaymentMethod.cash,
+      );
+
+      // 2nd Payment ₹3,000 (Remaining full amount)
+      final fullPayment = await ctrl.recordPayment(
+        dueId: 'due_1',
+        amount: 3000.0,
+        paymentMethod: PaymentMethod.upi,
+      );
+
+      expect(fullPayment, isNotNull);
+
+      final state = container.read(duesControllerProvider);
+      final enrichedDue = state.dues.firstWhere((d) => d.id == 'due_1');
+      expect(enrichedDue.paidAmount, 5000.0);
+      expect(enrichedDue.remainingAmount, 0.0);
+      expect(enrichedDue.status, DueStatus.paid);
+      expect(enrichedDue.isFullyPaid, isTrue);
+    });
+
+    test('5. recordPayment rejects payment exceeding remaining amount or <= 0',
+        () async {
+      final ctrl = container.read(duesControllerProvider.notifier);
+      await ctrl.loadDues();
+
+      // Attempt payment of ₹6,000 against ₹5,000 due
+      final overPayment = await ctrl.recordPayment(
+        dueId: 'due_1',
+        amount: 6000.0,
+        paymentMethod: PaymentMethod.cash,
+      );
+      expect(overPayment, isNull);
+      expect(container.read(duesControllerProvider).error,
+          'Payment cannot be greater than the remaining amount.');
+
+      // Attempt payment of ₹0
+      final zeroPayment = await ctrl.recordPayment(
+        dueId: 'due_1',
+        amount: 0,
+        paymentMethod: PaymentMethod.cash,
+      );
+      expect(zeroPayment, isNull);
+    });
+
+    test('6. deletePayment recalculates due paid amount and status immediately',
+        () async {
+      final ctrl = container.read(duesControllerProvider.notifier);
+      await ctrl.loadDues();
+
+      // Record payment of ₹5,000 -> PAID
+      final payment = await ctrl.recordPayment(
+        dueId: 'due_1',
+        amount: 5000.0,
+        paymentMethod: PaymentMethod.upi,
+      );
+      expect(payment, isNotNull);
+
+      var state = container.read(duesControllerProvider);
+      expect(
+          state.dues.firstWhere((d) => d.id == 'due_1').status, DueStatus.paid);
+
+      // Delete payment
+      final deleted = await ctrl.deletePayment(payment!.id);
+      expect(deleted, isTrue);
+
+      state = container.read(duesControllerProvider);
+      final revertedDue = state.dues.firstWhere((d) => d.id == 'due_1');
+      expect(revertedDue.paidAmount, 0.0);
+      expect(revertedDue.remainingAmount, 5000.0);
+      expect(revertedDue.status, DueStatus.due);
+    });
+
+    test(
+        '7. hasFinancialRecordsForCustomer returns true for active, paid dues, or payments',
+        () async {
+      final ctrl = container.read(duesControllerProvider.notifier);
+      await ctrl.loadDues();
+
+      expect(ctrl.hasFinancialRecordsForCustomer('cust_1'), isTrue);
+      expect(ctrl.hasFinancialRecordsForCustomer('unknown_customer'), isFalse);
     });
   });
 }

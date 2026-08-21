@@ -1,516 +1,770 @@
-We are now starting STEP 4 of the DueIt production implementation.
+We are now starting STEP 8 of the DueIt production implementation.
 
-STEP 3 is complete and verified.
+STEP 7 — Payments & Collection — is complete and verified.
 
-The Flutter visual design system, reusable components, application shell, routes, static screens, tests, analysis, and debug APK are already working.
+Current verified state:
+
+- Authentication works
+- Business setup works
+- Customer management works
+- Firestore ownership/security works
+- Due engine works
+- Due status calculation works
+- Payment recording works
+- Partial payments work
+- Full payments work
+- Payment history works
+- Customer financial summary works
+- Dashboard financial calculations work
+- 75 automated tests pass
+- flutter analyze = 0 issues
+- Debug APK builds successfully
 
 Now implement:
 
-AUTHENTICATION + BUSINESS SETUP
+REMINDERS & LOCAL NOTIFICATIONS
 
-Do not implement customers, dues, payments, reminders, recurring payments, or insights yet.
-
-==================================================
-STEP 4 OBJECTIVE
-==================================================
-
-Turn the existing static authentication flow into a real Firebase Authentication flow while preserving the existing Stitch-based UI exactly.
-
-The production flow should be:
-
-Splash
-→ Check authentication state
-→ Welcome
-→ Login / Create Account
-→ Business Setup
-→ Home
-
-For returning users:
-
-Splash
-→ Check authentication state
-→ Check business profile
-→ Home OR Business Setup
+This is one of DueIt's core product features.
 
 ==================================================
-AUTHENTICATION
+CORE PURPOSE
 ==================================================
 
-Use:
+DueIt exists partly to prevent business owners from forgetting to collect money.
 
-Firebase Authentication
-Email + Password
+A Due should be able to generate a reminder notification before or on its due date.
 
-Do not add:
+Core flow:
 
-- Google Sign-In
-- Phone OTP
-- Apple Sign-In
-- Facebook
-- Anonymous authentication
-
-Those are not part of the current MVP.
-
-==================================================
-FIREBASE SETUP
-==================================================
-
-Inspect the existing Flutter project first.
-
-Determine whether Firebase has already been configured.
-
-If Firebase is NOT configured:
-
-Set up the project using the standard FlutterFire workflow.
-
-Use:
-
-firebase_core
-firebase_auth
-
-Do not manually hardcode Firebase configuration values.
-
-Do not expose private credentials or secrets.
-
-Do not create a custom backend authentication system.
-
-Use the existing Firebase project if the project configuration is already present.
-
-If Firebase configuration requires a manual Firebase Console action, clearly tell me exactly what I need to enable/configure rather than inventing credentials.
+Due
+→ Reminder configuration
+→ Notification scheduled
+→ Notification appears
+→ User taps notification
+→ DueIt opens
+→ Due Details
 
 ==================================================
-REGISTRATION
+IMPORTANT
 ==================================================
 
-Implement a real account creation flow.
+Use LOCAL DEVICE NOTIFICATIONS for this step.
 
-Required:
+Do NOT implement Firebase Cloud Messaging yet.
 
-Email
-Password
-Confirm Password
+Do NOT implement a backend notification scheduler.
 
-Validation:
+Do NOT implement WhatsApp.
 
-- email cannot be empty
-- email must be valid
-- password cannot be empty
-- password must satisfy Firebase password requirements
-- confirmation must match password
+Do NOT implement email reminders.
 
-Use Firebase:
+Do NOT implement SMS.
 
-createUserWithEmailAndPassword()
+Do NOT implement AI reminders.
 
-After successful registration:
+Those are future features.
 
-1. User becomes authenticated.
-2. Continue to Business Setup.
-3. Do not send the user directly to Home unless a business profile already exists.
+==================================================
+PACKAGE
+==================================================
 
-Handle Firebase authentication errors gracefully.
+Inspect the current Flutter project and add/use:
 
-Do not expose raw technical Firebase error messages directly to users.
+flutter_local_notifications
 
-Convert common errors into understandable messages.
+Use the current compatible version appropriate for the project's Flutter/Dart version.
+
+Do not blindly copy old API examples.
+
+Verify the current package API from its documentation/changelog if needed.
+
+==================================================
+PLATFORM
+==================================================
+
+The primary target is Android.
+
+Implement Android notification support properly.
+
+If the project has iOS configuration already, structure the notification service so iOS can be added cleanly later, but do not let iOS-specific work derail the Android MVP.
+
+==================================================
+NOTIFICATION SERVICE
+==================================================
+
+Create a centralized notification service.
+
+Example responsibility:
+
+LocalNotificationService
+
+It should handle:
+
+initialize()
+requestPermissions()
+scheduleReminder()
+cancelReminder()
+cancelRemindersForDue()
+cancelAllDueReminders()
+getPendingNotifications()
+
+Do not put notification scheduling directly inside Due widgets.
+
+==================================================
+NOTIFICATION CHANNEL
+==================================================
+
+Create an appropriate Android notification channel for DueIt reminders.
+
+Example conceptual channel:
+
+Payment Reminders
+
+Use an appropriate importance level.
+
+Do not make notifications unnecessarily aggressive.
+
+The purpose is helpful reminders, not alarm behavior.
+
+==================================================
+PERMISSIONS
+==================================================
+
+Handle Android notification permission correctly for supported Android versions.
+
+Do not assume notification permission is automatically granted.
+
+Ask for permission at an appropriate point.
+
+Do not immediately show a permission prompt before the user understands why notifications are useful.
+
+Prefer:
+
+User creates their first reminder
+→ explain reminder benefit
+→ request notification permission
+
+If permission is denied:
+
+The Due should still be saved.
+
+Show a useful message explaining that reminders are disabled until notification permission is enabled.
+
+Do not break the Due creation workflow because notification permission was denied.
+
+==================================================
+REMINDER MODEL
+==================================================
+
+Create a proper reminder configuration model if the current Due architecture does not already contain one.
+
+A Due should conceptually support:
+
+reminderEnabled
+reminderType
+reminderTime
+
+Reminder types:
+
+NONE
+ON_DUE_DATE
+ONE_DAY_BEFORE
+THREE_DAYS_BEFORE
+SEVEN_DAYS_BEFORE
+CUSTOM
+
+If the current UI/design supports additional options, preserve them.
+
+Do not create unnecessary complexity.
+
+==================================================
+REMINDER DATE CALCULATION
+==================================================
+
+Centralize reminder date calculation.
 
 Examples:
 
-"An account with this email already exists."
-"Please enter a valid email address."
-"Your password is too weak."
-"Unable to create your account. Please try again."
+Due:
+Aug 25
+
+One day before:
+Aug 24
+
+Three days before:
+Aug 22
+
+Seven days before:
+Aug 18
+
+Do not scatter this calculation across widgets.
+
+Use the existing DueIt date-only utilities.
 
 ==================================================
-LOGIN
+TIME OF DAY
 ==================================================
 
-Implement:
+A reminder needs a notification time.
 
-Email
-Password
+Use a sensible default according to the existing Stitch design.
 
-Use:
+If the UI already specifies a reminder time, preserve it.
 
-signInWithEmailAndPassword()
+If not, use a reasonable configurable default such as:
 
-Handle common failure cases.
+9:00 AM local time.
 
-Do not reveal unnecessary information that could help enumerate accounts.
+Do not hardcode the notification time in multiple places.
 
-Show friendly errors such as:
+Create a centralized default.
 
-"Email or password is incorrect."
-
-Include the existing Stitch-designed:
-
-Forgot Password
-
-flow.
+Allow future customization.
 
 ==================================================
-PASSWORD RESET
+SCHEDULE RULE
 ==================================================
 
-Implement password reset using Firebase Authentication.
+Before scheduling:
 
-Use:
+Determine:
 
-sendPasswordResetEmail()
+reminderDateTime
 
-Flow:
+If reminder time is already in the past:
 
-Forgot Password
-→ Enter Email
-→ Send Reset Email
-→ Success state
+Do NOT schedule a notification in the past.
 
-Success message:
+Handle this gracefully.
 
-"If an account exists for this email, we've sent instructions to reset your password."
+For example:
 
-Do not expose unnecessary account-existence information.
+Due today
+Reminder = on due date
+Current time = 3 PM
+Default reminder time = 9 AM
 
-==================================================
-LOGOUT
-==================================================
+Do not schedule a notification for 9 AM today.
 
-Implement logout using Firebase Authentication.
+Instead:
 
-Use:
+Either skip the reminder
 
-FirebaseAuth.instance.signOut()
+or, if the existing UX explicitly supports it, schedule an appropriate next valid reminder.
 
-After logout:
-
-→ authentication state changes
-→ user returns to the appropriate unauthenticated screen
-
-Do not simply navigate to Login without actually signing out.
+Do not unexpectedly fire an old reminder immediately.
 
 ==================================================
-AUTH STATE
+DUE CREATION
 ==================================================
 
-Create a proper authentication state layer.
+When a Due is created with a reminder:
 
-Use Riverpod consistently with the existing architecture.
+1. Save the Due.
+2. Determine reminder datetime.
+3. Schedule local notification.
+4. Store enough reminder metadata to manage the notification later.
 
-The application must react to:
+Do not schedule the notification before the Due has successfully been saved.
 
-authenticated
-unauthenticated
-loading
+If scheduling fails:
 
-Do not manually scatter authentication checks across every screen.
+The Due should remain saved.
 
-Create a centralized authentication state/provider/service.
+Show a warning that the reminder could not be scheduled.
 
-The application should listen to Firebase authentication state changes.
-
-Do not rely only on checking auth once during app startup.
+Do not roll back a valid Due simply because the local notification failed.
 
 ==================================================
-ROUTING
+NOTIFICATION ID
 ==================================================
+
+Create a deterministic notification ID for each Due/reminder.
+
+Do not rely on random IDs that cannot later be found.
+
+The ID should allow:
+
+schedule
+cancel
+reschedule
+
+for the specific Due.
+
+If one Due eventually supports multiple reminders, structure the ID generation so this can be extended.
+
+==================================================
+EDIT DUE
+==================================================
+
+This is extremely important.
+
+If any reminder-related field changes:
+
+Cancel the existing notification.
+
+Then calculate the new reminder.
+
+Then schedule the new notification.
+
+Example:
+
+Original:
+
+Due Aug 25
+Reminder Aug 24
+
+Edit:
+
+Due Aug 28
+Reminder one day before
+
+Result:
+
+Old Aug 24 notification must be cancelled.
+
+New Aug 27 notification must be scheduled.
+
+Do not leave stale notifications.
+
+==================================================
+STATUS CHANGES
+==================================================
+
+When a Due becomes:
+
+PAID
+
+Cancel any pending reminders.
+
+When a Due becomes:
+
+CANCELLED
+
+Cancel any pending reminders.
+
+When a Due becomes:
+
+PARTIALLY_PAID
+
+Keep the reminder active for the remaining balance unless the existing product requirements explicitly say otherwise.
+
+The owner still needs to collect the remaining amount.
+
+==================================================
+PAYMENT INTERACTION
+==================================================
+
+If:
+
+Due = ₹5,000
+Paid = ₹2,000
+Remaining = ₹3,000
+
+Reminder should communicate the remaining amount where appropriate.
+
+Example:
+
+"₹3,000 remaining from Rahul Kumar."
+
+Do not show the original ₹5,000 as still fully outstanding.
+
+For PAID:
+
+No future reminder should remain scheduled.
+
+==================================================
+NOTIFICATION CONTENT
+==================================================
+
+Notification title examples:
+
+"Payment due today"
+"Payment due tomorrow"
+"Payment overdue"
+
+Notification body should include:
+
+Customer name
+Remaining amount
+Description
+
+Example:
+
+Payment due tomorrow
+
+Rahul Kumar owes ₹1,500 for August Karate Fee.
+
+Keep notifications concise.
+
+Do not expose unnecessary private information.
+
+==================================================
+OVERDUE NOTIFICATIONS
+==================================================
+
+Do not implement continuous daily overdue notifications yet.
+
+For this step, only schedule the configured reminder.
+
+The existing Overdue screen can continue to show overdue payments.
+
+Future versions may support recurring overdue reminders.
+
+==================================================
+NOTIFICATION TAP
+==================================================
+
+When the user taps a DueIt notification:
+
+Open the application.
+
+Navigate to the relevant:
+
+/due/:id
 
 Use the existing GoRouter architecture.
 
-Implement proper route protection.
+If the Due no longer exists:
 
-Unauthenticated user:
+Open DueIt safely without crashing.
 
-Cannot access:
+If the Due is already PAID:
 
-/dashboard
-/dues
-/customers
-/insights
-/settings
-/customer/:id
-/due/:id
-/add-due
+Open the Due Details screen showing PAID status.
 
-Authenticated user:
-
-Can access the main application.
-
-Do not allow authenticated users to unnecessarily return to Login through normal back navigation.
-
-Handle redirects centrally through the routing/auth architecture.
-
-Do not create redirect loops.
+Do not open a broken route.
 
 ==================================================
-SPLASH
+APP STATE
 ==================================================
 
-Use the existing Stitch Splash screen.
+Notification tap must work when:
 
-The splash screen should:
+1. App is already open
+2. App is in background
+3. App was previously closed
 
-1. Initialize required Firebase state.
-2. Determine authentication state.
-3. Determine whether the user has completed Business Setup.
-4. Navigate appropriately.
+Use the correct flutter_local_notifications launch/tap handling.
 
-Do not use arbitrary delays just to make the splash screen visible.
-
-Do not use:
-
-Future.delayed()
-
-as a substitute for real initialization.
+Do not assume one lifecycle state.
 
 ==================================================
-BUSINESS SETUP
+REMINDER UI
 ==================================================
 
-After a new user successfully registers, show Business Setup.
+Connect the existing Stitch ReminderSelector.
 
-The purpose is to collect minimal information about the business.
+The UI should support:
 
-Required:
+None
+On due date
+1 day before
+3 days before
+7 days before
+Custom if already designed
 
-Business name
-
-Optional:
-
-Business type/category
-
-Examples:
-
-Karate Academy
-Fitness Studio
-Tuition Center
-Dance Academy
-Freelance Services
-Other
-
-Do not ask unnecessary questions.
-
-The setup should be fast.
-
-==================================================
-BUSINESS PROFILE
-==================================================
-
-For now, conceptually store:
-
-BusinessProfile
-
-Fields:
-
-id
-ownerId
-businessName
-businessType
-createdAt
-updatedAt
-
-The ownerId must correspond to the Firebase authenticated user's UID.
-
-Do not associate business data using email addresses.
-
-Use Firebase UID as the identity key.
-
-==================================================
-BUSINESS PROFILE STORAGE
-==================================================
-
-Use Cloud Firestore for the production business profile.
-
-Recommended conceptual structure:
-
-users/{uid}
-
-or an equivalent secure structure that works cleanly with the future DueIt data model.
-
-Before implementing the collection structure, inspect the existing architecture and choose a structure that will scale cleanly to:
-
-customers
-dues
-payments
-reminders
-business settings
-
-Do not create a complicated multi-tenant architecture yet.
-
-One authenticated account should own one DueIt business in the MVP.
-
-==================================================
-SECURITY
-==================================================
-
-Do not leave Firestore open to everyone.
-
-Create security rules so that an authenticated user can only access their own business data.
-
-Do not use:
-
-allow read, write: if true;
-
-Do not create insecure test rules.
-
-The authenticated Firebase UID must be used to determine ownership.
-
-If rules require Firebase Console deployment/configuration, explain what needs to be done.
-
-==================================================
-BUSINESS SETUP BEHAVIOR
-==================================================
-
-After registration:
-
-User
-→ Business Setup
-→ Enter Business Name
-→ Select optional business type
-→ Save
-→ Business profile created
-→ Navigate Home
-
-After successful setup:
-
-The Home screen should display the business context appropriately if the Stitch design includes it.
-
-Do not redesign the Home screen.
-
-==================================================
-RETURNING USERS
-==================================================
-
-When the app is reopened:
-
-If authenticated AND business profile exists:
-
-→ Home
-
-If authenticated BUT business profile does not exist:
-
-→ Business Setup
-
-If unauthenticated:
-
-→ Welcome/Login
-
-Do not force a logged-in user through Business Setup every time.
-
-==================================================
-ERROR HANDLING
-==================================================
-
-Handle:
-
-- no internet connection
-- Firebase unavailable
-- invalid credentials
-- weak password
-- duplicate email
-- password mismatch
-- empty fields
-- invalid email
-- Firestore failure
-- timeout
-
-Use friendly UI states.
-
-Do not crash.
-
-Do not expose stack traces to the user.
-
-==================================================
-LOADING STATES
-==================================================
-
-Every asynchronous authentication/business operation must have a proper loading state.
-
-Examples:
-
-Signing in...
-Creating account...
-Saving business...
-
-Prevent duplicate submissions while an operation is running.
-
-Disable the primary button while submitting.
-
-==================================================
-DESIGN REQUIREMENT
-==================================================
-
-DO NOT redesign the existing Stitch screens.
+Do not redesign the existing Stitch screen.
 
 Preserve:
 
-- colors
 - typography
 - spacing
-- button styles
-- input styles
-- cards
-- navigation
-- illustrations
+- buttons
+- selector style
+- colors
 - hierarchy
-- animations if already present
-
-Only add the necessary states:
-
-- loading
-- validation error
-- Firebase error
-- success
-
-These states should use the existing DueIt design system.
 
 ==================================================
-ARCHITECTURE
+ADD DUE FLOW
 ==================================================
 
-Follow the existing feature-based Flutter architecture.
+The final flow should be:
 
-Authentication should have appropriate separation between:
+Add Due
 
-- data/service layer
-- authentication state
-- repository/service where appropriate
-- presentation
-- routing
+Customer
+Amount
+Description
+Due Date
+Reminder
 
-Do not put Firebase calls directly into UI widgets.
+→ Save
 
-Do not put business setup Firestore calls directly into widgets.
+Then:
 
-Keep widgets focused on presentation and user interaction.
+Due saved
++
+Reminder scheduled
+
+Show a subtle success confirmation.
+
+Example:
+
+"Due added. Reminder scheduled."
+
+Do not create an intrusive popup.
+
+==================================================
+EDIT DUE FLOW
+==================================================
+
+When editing:
+
+Due
+→ Edit
+→ Change reminder
+→ Save
+
+Cancel old reminder.
+
+Schedule new reminder.
+
+Show appropriate confirmation.
+
+==================================================
+REMINDER SETTINGS
+==================================================
+
+If the existing Settings screen has notification/reminder preferences, connect them only if they already exist in the Stitch design.
+
+Do not build a large notification settings system yet.
+
+At minimum allow:
+
+Notifications enabled/disabled
+
+if the current design already contains such a control.
+
+The operating-system permission remains authoritative.
+
+==================================================
+PERSISTENCE
+==================================================
+
+Reminder configuration should persist with the Due.
+
+Use Firestore for the Due's reminder configuration.
+
+Local scheduled notification state is device-specific.
+
+Do not attempt to store local notification state in Firestore as if it were the notification itself.
+
+The Firestore record describes the desired reminder.
+
+The device notification service schedules the actual notification.
+
+==================================================
+MULTI-DEVICE BEHAVIOR
+==================================================
+
+Important:
+
+Local notifications are device-local.
+
+If the same account is used on two devices:
+
+Each device may need to schedule reminders independently.
+
+Do not claim server-side synchronization of local notifications.
+
+Structure the code so a future server-driven notification system can replace/augment local notifications.
+
+==================================================
+NOTIFICATION FAILURE
+==================================================
+
+If local notification scheduling fails:
+
+- Due creation must still succeed.
+- Show a warning.
+- Log the technical failure for debugging.
+- Do not crash.
+
+If permission is denied:
+
+- Save Due.
+- Mark reminder as configured in data if appropriate.
+- Clearly indicate reminders are currently disabled.
 
 ==================================================
 TESTING
 ==================================================
 
-Add/update tests where practical.
+Add tests for:
 
-At minimum verify:
+1. Reminder model serialization
+2. Reminder model deserialization
+3. Reminder date calculation
+4. One-day-before calculation
+5. Three-days-before calculation
+6. Seven-days-before calculation
+7. Due-date reminder calculation
+8. Past reminder time handling
+9. Notification ID generation
+10. Payment status interaction
+11. PAID cancels reminder
+12. CANCELLED cancels reminder
+13. PARTIALLY_PAID keeps reminder
+14. Editing due reschedules reminder
 
-1. Unauthenticated state routes to authentication.
-2. Authenticated state is recognized.
-3. Registration validation works.
-4. Password confirmation validation works.
-5. Login validation works.
-6. Password reset validation works.
-7. Business setup validation works.
-8. Logout clears authentication state.
-9. Authenticated users cannot access unauthenticated-only screens.
-10. Unauthenticated users cannot access protected application screens.
+Mock the notification service for unit tests.
 
-Do not write tests that depend on real production Firebase credentials unless the project already has an appropriate test setup.
-
-Use mocks/fakes for unit-level tests where appropriate.
+Do not require actual Android notifications for normal unit tests.
 
 ==================================================
-MANUAL VERIFICATION
+MANUAL TEST FLOW
 ==================================================
 
-After implementation:
+TEST 1 — ONE DAY BEFORE
+
+Create:
+
+Rahul
+₹1,500
+Due Aug 25
+Reminder 1 day before
+
+Verify:
+
+Reminder is scheduled for Aug 24 at configured/default time.
+
+TEST 2 — DUE DATE
+
+Create:
+
+Arjun
+₹2,000
+Due tomorrow
+Reminder on due date
+
+Verify:
+
+Correct notification schedule.
+
+TEST 3 — NO REMINDER
+
+Create Due with:
+
+Reminder = None
+
+Verify:
+
+No notification scheduled.
+
+TEST 4 — EDIT
+
+Create:
+
+Due Aug 25
+Reminder Aug 24
+
+Edit:
+
+Due Aug 28
+
+Verify:
+
+Old notification cancelled.
+
+New notification scheduled.
+
+TEST 5 — PAID
+
+Create Due with reminder.
+
+Mark fully paid.
+
+Verify:
+
+Pending reminder is cancelled.
+
+TEST 6 — PARTIAL
+
+Create:
+
+₹5,000
+
+Pay:
+
+₹2,000
+
+Verify:
+
+Remaining ₹3,000.
+
+Reminder remains scheduled.
+
+TEST 7 — CANCEL
+
+Create Due with reminder.
+
+Cancel Due.
+
+Verify:
+
+Reminder is cancelled.
+
+TEST 8 — TAP
+
+Trigger a test notification.
+
+Tap it.
+
+Verify:
+
+DueIt opens the correct Due Details screen.
+
+TEST 9 — APP CLOSED
+
+Close the app.
+
+Trigger/test notification.
+
+Tap notification.
+
+Verify:
+
+Application opens and routes safely.
+
+==================================================
+ANDROID REQUIREMENTS
+==================================================
+
+Verify Android configuration required by flutter_local_notifications.
+
+Handle notification permission correctly for supported Android versions.
+
+Do not blindly add permissions without understanding their purpose.
+
+Ensure scheduled notifications work after app restart.
+
+If exact Android configuration is required, implement it and document it.
+
+==================================================
+DO NOT IMPLEMENT
+==================================================
+
+Do NOT implement:
+
+Firebase Cloud Messaging
+Backend notification scheduler
+WhatsApp
+Email
+SMS
+Recurring reminders
+Daily overdue reminders
+AI-generated reminders
+UPI
+Payment gateway
+SQLite
+Offline sync
+
+==================================================
+QUALITY GATE
+==================================================
+
+Before declaring STEP 8 complete:
 
 Run:
 
@@ -519,112 +773,41 @@ flutter analyze
 flutter test
 flutter build apk --debug
 
-Also run the application and manually verify:
+Requirements:
 
-TEST A — NEW USER
+flutter analyze = 0 issues.
 
-Welcome
-→ Create Account
-→ Email
-→ Password
-→ Confirm Password
-→ Register
-→ Business Setup
-→ Enter Business Name
-→ Save
-→ Home
+All tests pass.
 
-TEST B — EXISTING USER
+Debug APK builds successfully.
 
-Login
-→ Email
-→ Password
-→ Home
+Manually verify notification behavior on an actual Android device if available.
 
-TEST C — INVALID LOGIN
+Do not claim scheduled Android notifications work solely because the project compiles.
 
-Wrong credentials
-→ Friendly error
-→ Remains on Login
-
-TEST D — PASSWORD RESET
-
-Forgot Password
-→ Email
-→ Submit
-→ Success state
-
-TEST E — LOGOUT
-
-Home
-→ Settings
-→ Logout
-→ Authentication screen
-
-TEST F — APP RESTART
-
-Authenticated user closes/reopens app
-→ Should remain authenticated
-→ Should return to Home if business setup is complete
-
-TEST G — AUTH GUARD
-
-Attempt to access protected routes while logged out
-→ Should redirect to authentication
+If physical-device verification is not possible, explicitly state that.
 
 ==================================================
-DO NOT IMPLEMENT YET
+FINAL REPORT
 ==================================================
 
-Do NOT implement:
+Report:
 
-Customers
-Dues
-Payments
-Payment history
-Recurring payments
-Reminders
-Notifications
-Insights logic
-SQLite
-Offline synchronization
-FCM
-WhatsApp
-UPI
-AI features
+1. Notification package/version
+2. Notification service
+3. Reminder model
+4. Reminder scheduling logic
+5. Notification ID strategy
+6. Add Due integration
+7. Edit Due rescheduling
+8. Paid cancellation
+9. Cancelled cancellation
+10. Partial payment behavior
+11. Notification tap routing
+12. Android permission/configuration
+13. Tests
+14. APK build
+15. Physical-device verification status
+16. Known limitations
 
-Those belong to later implementation stages.
-
-==================================================
-FINAL VALIDATION
-==================================================
-
-Before declaring STEP 4 complete:
-
-- flutter analyze must have 0 issues
-- tests must pass
-- debug APK must build successfully
-- authentication must be real Firebase Authentication
-- business setup must persist correctly
-- protected routes must work
-- logout must work
-- app restart/auth persistence must work
-- no existing Stitch visual design should be unnecessarily changed
-
-When finished, report:
-
-1. Files created/changed
-2. Firebase packages added
-3. Firebase configuration status
-4. Authentication flow implemented
-5. Business profile implementation
-6. Firestore structure chosen
-7. Security rules created/changed
-8. Routes/auth guards implemented
-9. Tests performed
-10. Build result
-11. Any Firebase Console actions I still need to perform manually
-
-Do not proceed to customer management after completing this step.
-
-Stop after STEP 4 and report the results.
+STOP after STEP 8.

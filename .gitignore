@@ -6,6 +6,12 @@
 build/
 flutter_*.png
 
+# Environment & Secrets
+.env
+.env.*
+*.env
+*.key
+
 # Node & Web Artifacts
 node_modules/
 dist/

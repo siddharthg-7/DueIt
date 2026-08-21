@@ -9,11 +9,14 @@ import 'package:dueit/core/utils/date_formatter.dart';
 import 'package:dueit/shared/widgets/app_top_bar.dart';
 import 'package:dueit/shared/widgets/status_badge.dart';
 import 'package:dueit/shared/widgets/date_selector.dart';
+import 'package:dueit/shared/widgets/reminder_selector.dart';
 import 'package:dueit/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:dueit/features/customers/presentation/controllers/customer_controller.dart';
 import 'package:dueit/features/reminders/presentation/controllers/reminder_controller.dart';
 import '../../domain/entities/due_entity.dart';
+import '../../domain/entities/payment_record_entity.dart';
 import '../controllers/dues_controller.dart';
+import '../widgets/record_payment_dialog.dart';
 
 class DueDetailsScreen extends ConsumerWidget {
   final String dueId;
@@ -29,6 +32,8 @@ class DueDetailsScreen extends ConsumerWidget {
         TextEditingController(text: due.amount.toInt().toString());
     final descCtrl = TextEditingController(text: due.description);
     DateTime selectedDate = DateFormatter.parseLocalDate(due.dueDate);
+    String selectedReminder =
+        due.reminderEnabled ? due.reminderType.displayName : 'None';
     bool isSaving = false;
     String? errorMessage;
 
@@ -128,6 +133,15 @@ class DueDetailsScreen extends ConsumerWidget {
                     setModalState(() => selectedDate = d);
                   },
                 ),
+                const SizedBox(height: 14),
+
+                // Reminder Selector
+                ReminderSelector(
+                  selectedValue: selectedReminder,
+                  onChanged: (val) {
+                    setModalState(() => selectedReminder = val);
+                  },
+                ),
                 const SizedBox(height: 20),
 
                 // Save button
@@ -166,6 +180,10 @@ class DueDetailsScreen extends ConsumerWidget {
                               description: desc,
                               dueDate:
                                   DateFormatter.formatIsoDate(selectedDate),
+                              reminderType:
+                                  ReminderType.fromString(selectedReminder),
+                              reminderEnabled:
+                                  selectedReminder.toLowerCase() != 'none',
                             );
 
                             final success = await ref
@@ -174,6 +192,18 @@ class DueDetailsScreen extends ConsumerWidget {
 
                             if (success) {
                               if (sheetCtx.mounted) Navigator.pop(sheetCtx);
+                              if (context.mounted) {
+                                final hasReminder = updated.reminderEnabled &&
+                                    updated.reminderType != ReminderType.none;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(hasReminder
+                                        ? 'Due updated. Reminder rescheduled.'
+                                        : 'Due updated successfully.'),
+                                    duration: const Duration(seconds: 2),
+                                  ),
+                                );
+                              }
                             } else {
                               setModalState(() {
                                 isSaving = false;
@@ -323,6 +353,61 @@ class DueDetailsScreen extends ConsumerWidget {
     );
   }
 
+  void _confirmDeletePayment(
+    BuildContext context,
+    WidgetRef ref,
+    PaymentRecordEntity payment,
+  ) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'Delete Payment Record?',
+          style:
+              AppTypography.titleMedium.copyWith(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'Delete payment of ${CurrencyFormatter.format(payment.amount)}? The due balance and status will be updated immediately.',
+          style: AppTypography.bodyMedium,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Keep Payment'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              Navigator.pop(dialogCtx);
+              final success = await ref
+                  .read(duesControllerProvider.notifier)
+                  .deletePayment(payment.id);
+              if (context.mounted) {
+                if (success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Payment record removed.')),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(ref.read(duesControllerProvider).error ??
+                          'Failed to delete payment.'),
+                      backgroundColor: AppColors.error,
+                    ),
+                  );
+                }
+              }
+            },
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.error,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final duesState = ref.watch(duesControllerProvider);
@@ -353,6 +438,10 @@ class DueDetailsScreen extends ConsumerWidget {
     final displayName = customer?.name ??
         (due.customerName.isNotEmpty ? due.customerName : 'Client');
 
+    final duePayments =
+        duesState.payments.where((p) => p.dueId == due.id).toList();
+
+    final isPaid = due.status == DueStatus.paid;
     final isCancelled = due.status == DueStatus.cancelled;
 
     void sendWhatsAppReminder() async {
@@ -451,6 +540,8 @@ class DueDetailsScreen extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 12),
+
+                  // Remaining / Total Amount
                   Text(
                     CurrencyFormatter.format(due.amount),
                     style: AppTypography.displayLarge.copyWith(
@@ -467,17 +558,114 @@ class DueDetailsScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
 
-                  // WhatsApp Action Button
-                  if (customer != null && !isCancelled)
+                  // Paid / Remaining Breakdown
+                  if (due.paidAmount > 0) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isPaid
+                            ? AppColors.secondaryContainer
+                                .withValues(alpha: 0.3)
+                            : AppColors.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                            color: AppColors.surfaceVariant, width: 1),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          Column(
+                            children: [
+                              Text('Paid', style: AppTypography.labelSmall),
+                              const SizedBox(height: 2),
+                              Text(
+                                CurrencyFormatter.format(due.paidAmount),
+                                style: AppTypography.titleMedium.copyWith(
+                                  color: AppColors.secondary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Container(
+                            height: 28,
+                            width: 1,
+                            color: AppColors.surfaceVariant,
+                          ),
+                          Column(
+                            children: [
+                              Text('Remaining',
+                                  style: AppTypography.labelSmall),
+                              const SizedBox(height: 2),
+                              Text(
+                                CurrencyFormatter.format(due.remainingAmount),
+                                style: AppTypography.titleMedium.copyWith(
+                                  color: isPaid
+                                      ? AppColors.onSurfaceVariant
+                                      : AppColors.primary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // Action Buttons: Mark as Paid / Record Payment / WhatsApp
+                  if (!isPaid && !isCancelled) ...[
                     SizedBox(
-                      height: 40,
+                      width: double.infinity,
+                      height: 48,
                       child: FilledButton.icon(
-                        onPressed: sendWhatsAppReminder,
-                        icon: const Icon(Icons.chat, size: 16),
-                        label: const Text('Send Reminder on WhatsApp',
-                            style: TextStyle(fontSize: 13)),
+                        onPressed: () {
+                          RecordPaymentDialog.show(context, due: due);
+                        },
+                        icon: const Icon(Icons.check_circle_outline, size: 20),
+                        label: Text(
+                          due.paidAmount == 0
+                              ? 'Mark as Paid'
+                              : 'Record Payment',
+                          style: const TextStyle(
+                              fontSize: 15, fontWeight: FontWeight.w700),
+                        ),
                         style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.whatsAppGreen,
+                          backgroundColor: AppColors.primary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+
+                  // WhatsApp Action Button
+                  if (customer != null && !isCancelled && !isPaid)
+                    SizedBox(
+                      width: double.infinity,
+                      height: 44,
+                      child: OutlinedButton.icon(
+                        onPressed: sendWhatsAppReminder,
+                        icon: const Icon(Icons.chat,
+                            size: 16, color: AppColors.whatsAppDarkGreen),
+                        label: Text(
+                          'Send Reminder on WhatsApp',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.whatsAppDarkGreen,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(
+                              color: AppColors.whatsAppDarkGreen, width: 1),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
                         ),
                       ),
                     ),
@@ -598,6 +786,132 @@ class DueDetailsScreen extends ConsumerWidget {
               ],
             ),
           ),
+          const SizedBox(height: 20),
+
+          // Payment History Section
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Payment History',
+                style: AppTypography.titleMedium
+                    .copyWith(fontWeight: FontWeight.w700),
+              ),
+              Text(
+                '${duePayments.length} Payments',
+                style: AppTypography.bodySmall.copyWith(
+                  color: AppColors.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          if (duePayments.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceContainerLowest,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: AppColors.surfaceVariant),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                'No payments recorded yet for this due.',
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.onSurfaceVariant,
+                ),
+              ),
+            )
+          else
+            ...duePayments.map(
+              (payment) => Card(
+                color: AppColors.surfaceContainerLowest,
+                margin: const EdgeInsets.only(bottom: 8),
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: const BorderSide(
+                      color: AppColors.surfaceVariant, width: 1),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppColors.secondaryContainer
+                              .withValues(alpha: 0.3),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.payment,
+                            size: 20, color: AppColors.secondary),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  CurrencyFormatter.format(payment.amount),
+                                  style: AppTypography.titleMedium.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surfaceContainerHigh,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    payment.paymentMethod.displayName,
+                                    style: AppTypography.labelSmall.copyWith(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              DateFormatter.formatDisplayDate(
+                                  DateFormatter.parseLocalDate(payment.paidAt)),
+                              style: AppTypography.bodySmall.copyWith(
+                                color: AppColors.onSurfaceVariant,
+                              ),
+                            ),
+                            if (payment.notes != null &&
+                                payment.notes!.isNotEmpty) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                payment.notes!,
+                                style: AppTypography.bodySmall.copyWith(
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline,
+                            size: 18, color: AppColors.error),
+                        onPressed: () {
+                          _confirmDeletePayment(context, ref, payment);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
 
           const SizedBox(height: 40),
         ],

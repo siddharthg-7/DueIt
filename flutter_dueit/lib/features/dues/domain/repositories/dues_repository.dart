@@ -19,12 +19,12 @@ abstract class DuesRepository {
     required String dueId,
   });
 
-  // Payments Ledger (For Step 7 / future integration)
+  // Payments Stream & Operations
+  Stream<List<PaymentRecordEntity>> watchPayments(String ownerId);
   Future<List<PaymentRecordEntity>> getPayments([String? ownerId]);
-  Future<PaymentRecordEntity> recordPayment({
-    required String dueId,
-    required double amount,
-    required PaymentMethod paymentMethod,
-    String? notes,
+  Future<PaymentRecordEntity> recordPayment(PaymentRecordEntity payment);
+  Future<void> deletePayment({
+    required String ownerId,
+    required String paymentId,
   });
 }

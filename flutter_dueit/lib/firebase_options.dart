@@ -15,6 +15,11 @@ import 'package:flutter/foundation.dart'
 /// );
 /// ```
 class DefaultFirebaseOptions {
+  static const String _apiKey = String.fromEnvironment(
+    'FIREBASE_API_KEY',
+    defaultValue: 'AIzaSyCcCunUfbc7ZyYnVZ11BJy5_BgvmBX03-A',
+  );
+
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
       return web;
@@ -41,7 +46,7 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyCcCunUfbc7ZyYnVZ11BJy5_BgvmBX03-A',
+    apiKey: _apiKey,
     appId: '1:647205604247:web:270673ecc68cfd9b2352d2',
     messagingSenderId: '647205604247',
     projectId: 'dueit-f01c4',
@@ -50,7 +55,7 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyCcCunUfbc7ZyYnVZ11BJy5_BgvmBX03-A',
+    apiKey: _apiKey,
     appId: '1:647205604247:android:270673ecc68cfd9b2352d2',
     messagingSenderId: '647205604247',
     projectId: 'dueit-f01c4',
@@ -58,7 +63,7 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyCcCunUfbc7ZyYnVZ11BJy5_BgvmBX03-A',
+    apiKey: _apiKey,
     appId: '1:647205604247:ios:270673ecc68cfd9b2352d2',
     messagingSenderId: '647205604247',
     projectId: 'dueit-f01c4',
@@ -67,7 +72,7 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyCcCunUfbc7ZyYnVZ11BJy5_BgvmBX03-A',
+    apiKey: _apiKey,
     appId: '1:647205604247:ios:270673ecc68cfd9b2352d2',
     messagingSenderId: '647205604247',
     projectId: 'dueit-f01c4',
@@ -76,7 +81,7 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyCcCunUfbc7ZyYnVZ11BJy5_BgvmBX03-A',
+    apiKey: _apiKey,
     appId: '1:647205604247:web:270673ecc68cfd9b2352d2',
     messagingSenderId: '647205604247',
     projectId: 'dueit-f01c4',

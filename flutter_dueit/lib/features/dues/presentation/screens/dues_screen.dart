@@ -33,13 +33,21 @@ class _DuesScreenState extends ConsumerState<DuesScreen> {
 
   int _urgencyWeight(DueEntity due) {
     if (due.status == DueStatus.overdue ||
-        DateFormatter.isBeforeToday(due.dueDate)) {
+        (DateFormatter.isBeforeToday(due.dueDate) &&
+            due.status != DueStatus.paid)) {
       return 0; // Most urgent
     }
-    if (due.status == DueStatus.due || DateFormatter.isToday(due.dueDate)) {
+    if (due.status == DueStatus.due ||
+        (DateFormatter.isToday(due.dueDate) && due.status != DueStatus.paid)) {
       return 1;
     }
-    return 2; // Upcoming
+    if (due.status == DueStatus.partiallyPaid) {
+      return 2;
+    }
+    if (due.status == DueStatus.upcoming) {
+      return 3;
+    }
+    return 4; // Paid / settled
   }
 
   @override
@@ -66,6 +74,15 @@ class _DuesScreenState extends ConsumerState<DuesScreen> {
         return false;
       }
 
+      if (duesState.duesFilter == 'Paid') {
+        return d.status == DueStatus.paid;
+      }
+
+      // Active filters exclude fully settled dues
+      if (d.status == DueStatus.paid) {
+        return false;
+      }
+
       if (duesState.duesFilter == 'Today') {
         return DateFormatter.isToday(d.dueDate);
       }
@@ -78,7 +95,7 @@ class _DuesScreenState extends ConsumerState<DuesScreen> {
       return true;
     }).toList();
 
-    // Urgency sorting: Overdue -> Today -> Upcoming (nearest date first)
+    // Urgency sorting
     filteredDues.sort((a, b) {
       final weightA = _urgencyWeight(a);
       final weightB = _urgencyWeight(b);
@@ -89,10 +106,11 @@ class _DuesScreenState extends ConsumerState<DuesScreen> {
     });
 
     final totalFiltered = filteredDues.fold<double>(0, (sum, d) {
-      return sum + d.remainingAmount;
+      return sum +
+          (d.status == DueStatus.paid ? d.paidAmount : d.remainingAmount);
     });
 
-    final filterTabs = ['All', 'Today', 'Upcoming', 'Overdue'];
+    final filterTabs = ['All', 'Today', 'Upcoming', 'Overdue', 'Paid'];
 
     String emptyTitle() {
       if (_searchController.text.isNotEmpty) return 'No matching dues';
@@ -103,6 +121,8 @@ class _DuesScreenState extends ConsumerState<DuesScreen> {
           return 'No overdue payments';
         case 'Upcoming':
           return 'No upcoming dues';
+        case 'Paid':
+          return 'No settled dues';
         default:
           return 'No payments tracked yet';
       }
@@ -119,6 +139,8 @@ class _DuesScreenState extends ConsumerState<DuesScreen> {
           return 'No overdue payments. Great job!';
         case 'Upcoming':
           return 'No upcoming payments scheduled.';
+        case 'Paid':
+          return 'Settled dues will appear here.';
         default:
           return 'Create your first due to start tracking collections.';
       }
@@ -214,8 +236,11 @@ class _DuesScreenState extends ConsumerState<DuesScreen> {
                 icon: Icons.receipt_long,
                 title: emptyTitle(),
                 description: emptyDescription(),
-                actionText: '+ Create Due',
-                onAction: () => context.push(RouteNames.addDue),
+                actionText:
+                    duesState.duesFilter == 'Paid' ? null : '+ Create Due',
+                onAction: duesState.duesFilter == 'Paid'
+                    ? null
+                    : () => context.push(RouteNames.addDue),
               )
             else
               ...filteredDues.map(

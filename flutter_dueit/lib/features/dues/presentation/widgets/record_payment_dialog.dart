@@ -32,7 +32,9 @@ class RecordPaymentDialog extends ConsumerStatefulWidget {
 class _RecordPaymentDialogState extends ConsumerState<RecordPaymentDialog> {
   late TextEditingController _amountController;
   final TextEditingController _notesController = TextEditingController();
-  PaymentMethod _selectedMethod = PaymentMethod.upi;
+  PaymentMethod _selectedMethod = PaymentMethod.cash;
+  bool _isSubmitting = false;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -64,184 +66,287 @@ class _RecordPaymentDialogState extends ConsumerState<RecordPaymentDialog> {
         top: 20,
         bottom: MediaQuery.of(context).viewInsets.bottom + 24,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.receipt_long,
-                      color: AppColors.primary, size: 24),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Record Payment',
-                    style: AppTypography.headlineMedium.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-              IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // Client & Due Info Box
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.surfaceVariant),
-            ),
-            child: Row(
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                Row(
                   children: [
+                    const Icon(Icons.receipt_long,
+                        color: AppColors.primary, size: 24),
+                    const SizedBox(width: 8),
                     Text(
-                      widget.due.customerName,
-                      style: AppTypography.titleMedium
-                          .copyWith(fontWeight: FontWeight.w600),
-                    ),
-                    Text(
-                      widget.due.description,
-                      style: AppTypography.bodySmall,
-                    ),
-                  ],
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text('Remaining Due', style: AppTypography.labelSmall),
-                    Text(
-                      CurrencyFormatter.format(remaining),
-                      style: AppTypography.titleMedium.copyWith(
-                        color: AppColors.primary,
+                      'Record Payment',
+                      style: AppTypography.headlineMedium.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                   ],
                 ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed:
+                      _isSubmitting ? null : () => Navigator.pop(context),
+                ),
               ],
             ),
-          ),
-          const SizedBox(height: 16),
+            const SizedBox(height: 16),
 
-          // Amount Input with "Full Amount" button
-          Text('Amount Received *', style: AppTypography.labelSmall),
-          const SizedBox(height: 6),
-          TextField(
-            controller: _amountController,
-            keyboardType: TextInputType.number,
-            style:
-                AppTypography.titleMedium.copyWith(fontWeight: FontWeight.w700),
-            decoration: InputDecoration(
-              prefixText: '₹ ',
-              suffixIcon: TextButton(
-                onPressed: () {
-                  _amountController.text = remaining.toInt().toString();
-                },
-                child: const Text('Full Amount'),
+            if (_errorMessage != null) ...[
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.errorContainer.withValues(alpha: 0.25),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.errorContainer),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error_outline,
+                        color: AppColors.error, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _errorMessage!,
+                        style: AppTypography.bodySmall
+                            .copyWith(color: AppColors.error),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+
+            // Client & Due Info Box
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.surfaceVariant),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.due.customerName.isNotEmpty
+                              ? widget.due.customerName
+                              : 'Client',
+                          style: AppTypography.titleMedium
+                              .copyWith(fontWeight: FontWeight.w600),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          widget.due.description,
+                          style: AppTypography.bodySmall,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text('Remaining Due', style: AppTypography.labelSmall),
+                      Text(
+                        CurrencyFormatter.format(remaining),
+                        style: AppTypography.titleMedium.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-          ),
-          const SizedBox(height: 16),
+            const SizedBox(height: 16),
 
-          // Payment Method Selector
-          Text('Payment Method', style: AppTypography.labelSmall),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            children: PaymentMethod.values.map((method) {
-              final isSelected = _selectedMethod == method;
-              return ChoiceChip(
-                label: Text(method.displayName),
-                selected: isSelected,
-                selectedColor: AppColors.primary,
-                labelStyle: TextStyle(
-                  color: isSelected ? AppColors.onPrimary : AppColors.onSurface,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                  fontSize: 12,
+            // Amount Input with "Full Amount" button
+            Text('Amount Received (₹) *', style: AppTypography.labelSmall),
+            const SizedBox(height: 6),
+            TextField(
+              controller: _amountController,
+              enabled: !_isSubmitting,
+              keyboardType: TextInputType.number,
+              style: AppTypography.titleMedium
+                  .copyWith(fontWeight: FontWeight.w700),
+              decoration: InputDecoration(
+                prefixText: '₹ ',
+                suffixIcon: TextButton(
+                  onPressed: _isSubmitting
+                      ? null
+                      : () {
+                          _amountController.text = remaining.toInt().toString();
+                          setState(() => _errorMessage = null);
+                        },
+                  child: const Text('Full Amount'),
                 ),
-                onSelected: (selected) {
-                  if (selected) setState(() => _selectedMethod = method);
-                },
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 16),
-
-          // Notes
-          Text('Notes / Ref (Optional)', style: AppTypography.labelSmall),
-          const SizedBox(height: 6),
-          TextField(
-            controller: _notesController,
-            decoration: const InputDecoration(
-              hintText: 'e.g. UPI ref or cash receipt note...',
+              ),
             ),
-          ),
-          const SizedBox(height: 24),
+            const SizedBox(height: 16),
 
-          // Confirm Button
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: FilledButton.icon(
-              onPressed: () async {
-                final numAmount = double.tryParse(_amountController.text);
-                if (numAmount == null || numAmount <= 0) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text('Please enter a valid amount.')),
-                  );
-                  return;
-                }
-
-                final payment = await ref
-                    .read(duesControllerProvider.notifier)
-                    .recordPayment(
-                      dueId: widget.due.id,
-                      amount: numAmount,
-                      paymentMethod: _selectedMethod,
-                      notes: _notesController.text.trim().isEmpty
-                          ? null
-                          : _notesController.text.trim(),
-                    );
-
-                if (mounted && context.mounted) {
-                  Navigator.pop(context);
-
-                  // Show receipt dialog
-                  final user = ref.read(authControllerProvider).user;
-                  final customer = ref
-                      .read(customerControllerProvider)
-                      .customers
-                      .where((c) => c.id == widget.due.customerId)
-                      .firstOrNull;
-
-                  if (context.mounted) {
-                    PaymentReceiptDialog.show(
-                      context,
-                      payment: payment,
-                      businessProfile: user,
-                      customerPhone: customer?.phone,
-                    );
-                  }
-                }
-              },
-              icon: const Icon(Icons.check_circle, size: 20),
-              label: const Text('Confirm & Generate Receipt'),
+            // Payment Method Selector
+            Text('Payment Method', style: AppTypography.labelSmall),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                PaymentMethod.cash,
+                PaymentMethod.upi,
+                PaymentMethod.bankTransfer,
+                PaymentMethod.other,
+              ].map((method) {
+                final isSelected = _selectedMethod == method;
+                return ChoiceChip(
+                  label: Text(method.displayName),
+                  selected: isSelected,
+                  selectedColor: AppColors.primary,
+                  labelStyle: TextStyle(
+                    color:
+                        isSelected ? AppColors.onPrimary : AppColors.onSurface,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    fontSize: 12,
+                  ),
+                  onSelected: _isSubmitting
+                      ? null
+                      : (selected) {
+                          if (selected) {
+                            setState(() => _selectedMethod = method);
+                          }
+                        },
+                );
+              }).toList(),
             ),
-          ),
-        ],
+            const SizedBox(height: 16),
+
+            // Notes
+            Text('Notes / Ref (Optional)', style: AppTypography.labelSmall),
+            const SizedBox(height: 6),
+            TextField(
+              controller: _notesController,
+              enabled: !_isSubmitting,
+              decoration: const InputDecoration(
+                hintText: 'e.g. UPI ref or cash receipt note...',
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Confirm Button
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: FilledButton.icon(
+                onPressed: _isSubmitting
+                    ? null
+                    : () async {
+                        final numAmount =
+                            double.tryParse(_amountController.text.trim());
+                        if (numAmount == null || numAmount <= 0) {
+                          setState(() {
+                            _errorMessage =
+                                'Please enter a valid amount greater than ₹0.';
+                          });
+                          return;
+                        }
+
+                        if (numAmount > remaining + 0.001) {
+                          setState(() {
+                            _errorMessage =
+                                'Payment cannot be greater than the remaining amount.';
+                          });
+                          return;
+                        }
+
+                        setState(() {
+                          _isSubmitting = true;
+                          _errorMessage = null;
+                        });
+
+                        final payment = await ref
+                            .read(duesControllerProvider.notifier)
+                            .recordPayment(
+                              dueId: widget.due.id,
+                              amount: numAmount,
+                              paymentMethod: _selectedMethod,
+                              notes: _notesController.text.trim().isEmpty
+                                  ? null
+                                  : _notesController.text.trim(),
+                            );
+
+                        if (!mounted) return;
+                        setState(() => _isSubmitting = false);
+
+                        if (payment != null) {
+                          if (context.mounted) {
+                            Navigator.pop(context);
+
+                            final user = ref.read(authControllerProvider).user;
+                            final customer = ref
+                                .read(customerControllerProvider)
+                                .customers
+                                .where((c) => c.id == widget.due.customerId)
+                                .firstOrNull;
+
+                            if (context.mounted) {
+                              PaymentReceiptDialog.show(
+                                context,
+                                payment: payment,
+                                businessProfile: user,
+                                customerPhone: customer?.phone,
+                              );
+                            }
+                          }
+                        } else {
+                          setState(() {
+                            _errorMessage =
+                                ref.read(duesControllerProvider).error ??
+                                    'Failed to record payment.';
+                          });
+                        }
+                      },
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                icon: _isSubmitting
+                    ? const SizedBox.shrink()
+                    : const Icon(Icons.check_circle, size: 20),
+                label: _isSubmitting
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Text(
+                        'Confirm Payment',
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
