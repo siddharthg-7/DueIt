@@ -27,13 +27,11 @@ class AddDueScreen extends ConsumerStatefulWidget {
 }
 
 class _AddDueScreenState extends ConsumerState<AddDueScreen> {
-  final TextEditingController _amountController =
-      TextEditingController(text: '1500');
-  final TextEditingController _descController =
-      TextEditingController(text: 'August Karate Fee');
+  final TextEditingController _amountController = TextEditingController();
+  final TextEditingController _descController = TextEditingController();
   String? _selectedCustomerId;
   DateTime _selectedDate = DateTime.now();
-  String _selectedRecurrence = 'Monthly';
+  String _selectedRecurrence = 'One-time';
   String _selectedReminder = '1 day before';
   bool _isSubmitting = false;
 

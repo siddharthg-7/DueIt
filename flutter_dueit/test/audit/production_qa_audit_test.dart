@@ -74,7 +74,8 @@ void main() {
     // ==========================================
     // PART 2: AUTHENTICATION & MULTI-TENANT ISOLATION
     // ==========================================
-    test('Audit 1: User session isolation and state clearing across logout/login',
+    test(
+        'Audit 1: User session isolation and state clearing across logout/login',
         () async {
       // 1. User A adds customer and due
       final customerCtrl = container.read(customerControllerProvider.notifier);
@@ -285,7 +286,9 @@ void main() {
     // ==========================================
     // PART 7: DASHBOARD METRICS INTEGRITY
     // ==========================================
-    test('Audit 4: Dashboard financial calculation scenario without double counting', () {
+    test(
+        'Audit 4: Dashboard financial calculation scenario without double counting',
+        () {
       final dues = [
         // Due A: ₹5,000 Today (₹2,000 paid today -> remaining ₹3,000)
         DueEntity(
@@ -354,7 +357,8 @@ void main() {
 
       // Verify exact expectations:
       expect(metrics.toCollectToday, 3000.0);
-      expect(metrics.collectedToday, 3000.0); // ₹2,000 on Due A + ₹1,000 on Due B
+      expect(
+          metrics.collectedToday, 3000.0); // ₹2,000 on Due A + ₹1,000 on Due B
       expect(metrics.overdueTotal, 3000.0); // Due B remaining
       expect(metrics.upcomingTotal, 3000.0); // Due C remaining
     });
@@ -362,7 +366,8 @@ void main() {
     // ==========================================
     // PART 8: RECURRING SCHEDULE IMMUTABILITY
     // ==========================================
-    test('Audit 5: Recurring schedule modification preserves historical dues', () async {
+    test('Audit 5: Recurring schedule modification preserves historical dues',
+        () async {
       final schedule = RecurringDueScheduleEntity(
         id: 'sched_history_1',
         ownerId: userA.id,
@@ -423,21 +428,26 @@ void main() {
     // ==========================================
     // PART 16: DELETE SAFETY
     // ==========================================
-    test('Audit 6: Customer deletion guard blocks deletion when financial records exist', () {
+    test(
+        'Audit 6: Customer deletion guard blocks deletion when financial records exist',
+        () {
       final duesCtrl = container.read(duesControllerProvider.notifier);
 
       // Customer with an active due
       final hasActive = duesCtrl.hasActiveDuesForCustomer('c_active');
       expect(hasActive, isFalse);
 
-      final hasFinancial = duesCtrl.hasFinancialRecordsForCustomer('c_financial');
+      final hasFinancial =
+          duesCtrl.hasFinancialRecordsForCustomer('c_financial');
       expect(hasFinancial, isFalse);
     });
 
     // ==========================================
     // PART 17: SEARCH AND FILTER ROBUSTNESS
     // ==========================================
-    test('Audit 7: Search and filter handling of whitespace, casing, and empty queries', () async {
+    test(
+        'Audit 7: Search and filter handling of whitespace, casing, and empty queries',
+        () async {
       final customerCtrl = container.read(customerControllerProvider.notifier);
 
       await customerCtrl.addCustomer(name: 'Aarav Sharma');
@@ -449,11 +459,13 @@ void main() {
 
       // Case differences & whitespace
       customerCtrl.setSearchQuery('  aarav  ');
-      expect(container.read(customerControllerProvider).searchQuery, '  aarav  ');
+      expect(
+          container.read(customerControllerProvider).searchQuery, '  aarav  ');
 
       // Filter tabs
       customerCtrl.setFilterTab('With Balance');
-      expect(container.read(customerControllerProvider).filterTab, 'With Balance');
+      expect(
+          container.read(customerControllerProvider).filterTab, 'With Balance');
 
       customerCtrl.setFilterTab('Overdue');
       expect(container.read(customerControllerProvider).filterTab, 'Overdue');

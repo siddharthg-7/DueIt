@@ -80,6 +80,10 @@ class CustomerRepositoryImpl implements CustomerRepository {
 
       final customerToSave = customer.copyWith(
         id: docRef.id,
+        ownerId: customer.ownerId,
+        businessId: customer.businessId.isNotEmpty
+            ? customer.businessId
+            : customer.ownerId,
         createdAt: customer.createdAt,
         updatedAt: DateTime.now(),
       );

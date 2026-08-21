@@ -92,6 +92,8 @@ class DuesRepositoryImpl implements DuesRepository {
       final now = DateTime.now();
       final dueToSave = due.copyWith(
         id: docRef.id,
+        ownerId: due.ownerId,
+        businessId: due.businessId.isNotEmpty ? due.businessId : due.ownerId,
         createdAt: now,
         updatedAt: now,
       );
@@ -251,6 +253,10 @@ class DuesRepositoryImpl implements DuesRepository {
       final now = DateTime.now();
       final paymentToSave = payment.copyWith(
         id: docRef.id,
+        ownerId: payment.ownerId,
+        businessId: payment.businessId.isNotEmpty
+            ? payment.businessId
+            : payment.ownerId,
         createdAt: now,
       );
 

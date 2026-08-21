@@ -417,7 +417,7 @@ dart format .
 
 ## Optimizations
 
-* **Zero-Cost Firestore Queries**: Subcollection data partitioning ensures business queries execute against indexed subsets, maintaining read operations well within free tier limits.
+* **Scoped Subcollection Queries**: Subcollection data partitioning (`users/{userId}/*`) ensures queries execute exclusively against the authenticated user's documents with zero cross-tenant query overhead.
 * **Deterministic 31-bit Hashing**: Notification ID generation employs FNV-1a integer hashing bounded by `0x7FFFFFFF`, guaranteeing stable ID reconstruction without storing random ID maps.
 * **Disposed Stream Subscriptions**: StateNotifier lifecycle bindings automatically cancel active Firestore listeners upon signout, preventing memory retention.
 * **In-Memory Filtering**: Tab switching and customer searches operate on cached domain collections, eliminating redundant network queries.
