@@ -11,6 +11,7 @@ import 'package:dueit/shared/widgets/empty_state.dart';
 import 'package:dueit/shared/widgets/search_field.dart';
 import 'package:dueit/features/dues/presentation/controllers/dues_controller.dart';
 import 'package:dueit/features/dues/domain/entities/due_entity.dart';
+import 'package:dueit/features/customers/domain/entities/customer_entity.dart';
 import 'package:dueit/features/customers/presentation/controllers/customer_controller.dart';
 import 'package:dueit/features/reminders/presentation/controllers/reminder_controller.dart';
 
@@ -23,7 +24,7 @@ class CustomersScreen extends ConsumerStatefulWidget {
 
 class _CustomersScreenState extends ConsumerState<CustomersScreen> {
   final TextEditingController _searchController = TextEditingController();
-  String _sortBy = 'balance'; // 'balance', 'name'
+  String _sortBy = 'recent'; // 'recent', 'name', 'balance'
 
   @override
   void dispose() {
@@ -32,16 +33,19 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
   }
 
   void _showAddClientBottomSheet(BuildContext context) {
+    final formKey = GlobalKey<FormState>();
     final nameCtrl = TextEditingController();
     final phoneCtrl = TextEditingController();
     final emailCtrl = TextEditingController();
     final notesCtrl = TextEditingController();
+    bool isSaving = false;
+    String? errorMessage;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => StatefulBuilder(
+      builder: (sheetCtx) => StatefulBuilder(
         builder: (ctx, setModalState) => Container(
           decoration: const BoxDecoration(
             color: AppColors.surfaceContainerLowest,
@@ -53,114 +57,232 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
             top: 20,
             bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          child: Form(
+            key: formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Add New Client',
-                    style: AppTypography.headlineMedium.copyWith(
-                      fontWeight: FontWeight.w700,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Add New Client',
+                        style: AppTypography.headlineMedium.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed:
+                            isSaving ? null : () => Navigator.pop(sheetCtx),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Error banner if any
+                  if (errorMessage != null) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: AppColors.errorContainer.withValues(alpha: 0.25),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.errorContainer),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.error_outline,
+                              color: AppColors.error, size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              errorMessage!,
+                              style: AppTypography.bodySmall
+                                  .copyWith(color: AppColors.error),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+
+                  // Client Name (Required)
+                  TextFormField(
+                    controller: nameCtrl,
+                    enabled: !isSaving,
+                    autofocus: true,
+                    textCapitalization: TextCapitalization.words,
+                    decoration: const InputDecoration(
+                      labelText: 'Client Name *',
+                      hintText: 'e.g. Rahul Kumar',
+                      prefixIcon: Icon(Icons.person_outline),
+                    ),
+                    validator: (val) {
+                      if (val == null || val.trim().isEmpty) {
+                        return 'Client name is required';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Phone Number (Optional)
+                  TextFormField(
+                    controller: phoneCtrl,
+                    enabled: !isSaving,
+                    keyboardType: TextInputType.phone,
+                    decoration: const InputDecoration(
+                      labelText: 'Phone Number (Optional)',
+                      hintText: 'e.g. +91 98765 43210',
+                      prefixIcon: Icon(Icons.phone_outlined),
+                    ),
+                    validator: (val) {
+                      if (val != null && val.trim().isNotEmpty) {
+                        if (val.trim().length < 5) {
+                          return 'Please enter a valid phone number';
+                        }
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Email Address (Optional)
+                  TextFormField(
+                    controller: emailCtrl,
+                    enabled: !isSaving,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: const InputDecoration(
+                      labelText: 'Email Address (Optional)',
+                      hintText: 'e.g. rahul@example.com',
+                      prefixIcon: Icon(Icons.email_outlined),
+                    ),
+                    validator: (val) {
+                      if (val != null && val.trim().isNotEmpty) {
+                        if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                            .hasMatch(val.trim())) {
+                          return 'Please enter a valid email address';
+                        }
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Batch / Category Presets
+                  Text('Batch / Category Presets',
+                      style: AppTypography.labelSmall),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: AppConstants.batchPresets.map((preset) {
+                      final isSelected = notesCtrl.text == preset;
+                      return ChoiceChip(
+                        label: Text(preset),
+                        selected: isSelected,
+                        selectedColor: AppColors.primary,
+                        labelStyle: TextStyle(
+                          color: isSelected
+                              ? AppColors.onPrimary
+                              : AppColors.onSurface,
+                          fontSize: 11,
+                        ),
+                        onSelected: isSaving
+                            ? null
+                            : (selected) {
+                                setModalState(() {
+                                  notesCtrl.text = selected ? preset : '';
+                                });
+                              },
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Custom Batch or Notes
+                  TextFormField(
+                    controller: notesCtrl,
+                    enabled: !isSaving,
+                    decoration: const InputDecoration(
+                      labelText: 'Custom Batch or Notes (Optional)',
+                      hintText: 'e.g. Karate Evening Batch',
+                      prefixIcon: Icon(Icons.notes_outlined),
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(ctx),
+                  const SizedBox(height: 20),
+
+                  // Save Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: FilledButton(
+                      onPressed: isSaving
+                          ? null
+                          : () async {
+                              if (!(formKey.currentState?.validate() ??
+                                  false)) {
+                                return;
+                              }
+
+                              setModalState(() {
+                                isSaving = true;
+                                errorMessage = null;
+                              });
+
+                              final created = await ref
+                                  .read(customerControllerProvider.notifier)
+                                  .addCustomer(
+                                    name: nameCtrl.text.trim(),
+                                    phone: phoneCtrl.text.trim(),
+                                    email: emailCtrl.text.trim(),
+                                    notes: notesCtrl.text.trim(),
+                                  );
+
+                              if (created != null) {
+                                if (sheetCtx.mounted) {
+                                  Navigator.pop(sheetCtx);
+                                }
+                              } else {
+                                setModalState(() {
+                                  isSaving = false;
+                                  errorMessage = ref
+                                          .read(customerControllerProvider)
+                                          .error ??
+                                      'Failed to save client. Please try again.';
+                                });
+                              }
+                            },
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: isSaving
+                          ? const SizedBox(
+                              height: 22,
+                              width: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : const Text(
+                              'Save Client',
+                              style: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: nameCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Client Name *',
-                  hintText: 'e.g. Rahul Kumar',
-                ),
-                autofocus: true,
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: phoneCtrl,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(
-                  labelText: 'Phone Number *',
-                  hintText: 'e.g. +91 98765 43210',
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: emailCtrl,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(
-                  labelText: 'Email Address (Optional)',
-                  hintText: 'e.g. rahul@example.com',
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text('Batch / Category Presets', style: AppTypography.labelSmall),
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: AppConstants.batchPresets.map((preset) {
-                  final isSelected = notesCtrl.text == preset;
-                  return ChoiceChip(
-                    label: Text(preset),
-                    selected: isSelected,
-                    selectedColor: AppColors.primary,
-                    labelStyle: TextStyle(
-                      color: isSelected
-                          ? AppColors.onPrimary
-                          : AppColors.onSurface,
-                      fontSize: 11,
-                    ),
-                    onSelected: (selected) {
-                      setModalState(() {
-                        notesCtrl.text = selected ? preset : '';
-                      });
-                    },
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: notesCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Custom Batch or Notes',
-                  hintText: 'e.g. Karate Evening Batch',
-                ),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: FilledButton(
-                  onPressed: () async {
-                    if (nameCtrl.text.trim().isEmpty ||
-                        phoneCtrl.text.trim().isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('Name and phone are required.')),
-                      );
-                      return;
-                    }
-                    await ref
-                        .read(customerControllerProvider.notifier)
-                        .addCustomer(
-                          name: nameCtrl.text,
-                          phone: phoneCtrl.text,
-                          email: emailCtrl.text,
-                          notes: notesCtrl.text,
-                        );
-                    if (ctx.mounted) Navigator.pop(ctx);
-                  },
-                  child: const Text('Save Client'),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -195,7 +317,7 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
 
     // Filter by query and tab
     var filtered = customerListWithStats.where((item) {
-      final c = item['customer'] as dynamic;
+      final c = item['customer'] as CustomerEntity;
       final q = _searchController.text.toLowerCase().trim();
       final matchesQuery = q.isEmpty ||
           c.name.toLowerCase().contains(q) ||
@@ -217,9 +339,13 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
     if (_sortBy == 'balance') {
       filtered.sort(
           (a, b) => (b['balance'] as double).compareTo(a['balance'] as double));
+    } else if (_sortBy == 'name') {
+      filtered.sort((a, b) => ((a['customer'] as CustomerEntity).name)
+          .compareTo((b['customer'] as CustomerEntity).name));
     } else {
-      filtered.sort((a, b) => ((a['customer'] as dynamic).name as String)
-          .compareTo((b['customer'] as dynamic).name));
+      // Default: Most recently created/updated first
+      filtered.sort((a, b) => ((b['customer'] as CustomerEntity).updatedAt)
+          .compareTo((a['customer'] as CustomerEntity).updatedAt));
     }
 
     final tabs = ['All', 'With Balance', 'Overdue'];
@@ -234,7 +360,6 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
       body: RefreshIndicator(
         onRefresh: () async {
           await ref.read(customerControllerProvider.notifier).loadCustomers();
-          await ref.read(duesControllerProvider.notifier).loadDues();
         },
         color: AppColors.primary,
         child: ListView(
@@ -288,8 +413,9 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
                     fontWeight: FontWeight.w600,
                   ),
                   items: const [
-                    DropdownMenuItem(value: 'balance', child: Text('Balance')),
+                    DropdownMenuItem(value: 'recent', child: Text('Recent')),
                     DropdownMenuItem(value: 'name', child: Text('Name')),
+                    DropdownMenuItem(value: 'balance', child: Text('Balance')),
                   ],
                   onChanged: (val) {
                     if (val != null) setState(() => _sortBy = val);
@@ -299,8 +425,16 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
             ),
             const SizedBox(height: 16),
 
+            // Loading state
+            if (customerState.isLoading && customerState.customers.isEmpty)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 60),
+                  child: CircularProgressIndicator(color: AppColors.primary),
+                ),
+              )
             // Customer List / Empty State
-            if (filtered.isEmpty)
+            else if (filtered.isEmpty)
               EmptyState(
                 icon: Icons.person_off,
                 title: 'No clients found',
@@ -312,7 +446,7 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
               )
             else
               ...filtered.map((item) {
-                final customer = item['customer'] as dynamic;
+                final customer = item['customer'] as CustomerEntity;
                 final balance = item['balance'] as double;
                 final isOverdue = item['isOverdue'] as bool;
 

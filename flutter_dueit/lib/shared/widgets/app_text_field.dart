@@ -28,6 +28,7 @@ class AppTextField extends StatelessWidget {
   final TextCapitalization textCapitalization;
   final FocusNode? focusNode;
   final bool isRequired;
+  final bool? enabled;
 
   const AppTextField({
     super.key,
@@ -54,6 +55,7 @@ class AppTextField extends StatelessWidget {
     this.textCapitalization = TextCapitalization.none,
     this.focusNode,
     this.isRequired = false,
+    this.enabled,
   });
 
   @override
@@ -91,6 +93,7 @@ class AppTextField extends StatelessWidget {
           controller: controller,
           initialValue: initialValue,
           focusNode: focusNode,
+          enabled: enabled,
           obscureText: obscureText,
           keyboardType: keyboardType,
           textInputAction: textInputAction,

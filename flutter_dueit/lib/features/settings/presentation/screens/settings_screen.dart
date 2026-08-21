@@ -5,6 +5,7 @@ import 'package:dueit/core/theme/app_colors.dart';
 import 'package:dueit/core/theme/app_typography.dart';
 import 'package:dueit/core/constants/app_constants.dart';
 import 'package:dueit/shared/widgets/app_top_bar.dart';
+import 'package:dueit/core/routing/route_names.dart';
 import 'package:dueit/features/auth/presentation/controllers/auth_controller.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -210,7 +211,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 OutlinedButton.icon(
                   onPressed: () async {
                     await ref.read(authControllerProvider.notifier).signOut();
-                    if (context.mounted) context.go('/splash');
+                    if (context.mounted) context.go(RouteNames.welcome);
                   },
                   icon: const Icon(Icons.logout,
                       size: 18, color: AppColors.error),

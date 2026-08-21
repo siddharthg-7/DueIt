@@ -54,6 +54,12 @@ abstract class AppColors {
   static const Color errorContainer = Color(0xFFFFDAD6);
   static const Color onErrorContainer = Color(0xFF93000A);
 
+  // Success (Green / Affirmative)
+  static const Color success = Color(0xFF1B6C31);
+  static const Color onSuccess = Color(0xFFFFFFFF);
+  static const Color successContainer = Color(0xFFD0F4D4);
+  static const Color onSuccessContainer = Color(0xFF00210B);
+
   // Outlines & Borders
   static const Color outline = Color(0xFF6D7A77);
   static const Color outlineVariant = Color(0xFFBCC9C6);

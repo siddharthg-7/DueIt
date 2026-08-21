@@ -104,7 +104,8 @@ class WelcomeScreen extends StatelessWidget {
                   PrimaryButton(
                     label: 'Get Started',
                     icon: Icons.arrow_forward,
-                    onPressed: () => context.push(RouteNames.businessSetup),
+                    onPressed: () =>
+                        context.push('${RouteNames.login}?tab=register'),
                   ),
                   const SizedBox(height: 16),
                   Center(
@@ -118,7 +119,8 @@ class WelcomeScreen extends StatelessWidget {
                           ),
                         ),
                         GestureDetector(
-                          onTap: () => context.push(RouteNames.login),
+                          onTap: () =>
+                              context.push('${RouteNames.login}?tab=signin'),
                           child: Text(
                             'Sign In',
                             style: AppTypography.labelLarge.copyWith(

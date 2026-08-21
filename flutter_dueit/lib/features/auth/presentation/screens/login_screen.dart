@@ -5,9 +5,15 @@ import 'package:dueit/core/theme/app_colors.dart';
 import 'package:dueit/core/theme/app_typography.dart';
 import 'package:dueit/core/routing/route_names.dart';
 import 'package:dueit/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:dueit/shared/widgets/primary_button.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({super.key});
+  final bool initialIsSignUp;
+
+  const LoginScreen({
+    super.key,
+    this.initialIsSignUp = false,
+  });
 
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
@@ -18,25 +24,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   final _formKey = GlobalKey<FormState>();
 
   // Controllers
-  final _emailController =
-      TextEditingController(text: 'alex@karateacademy.com');
-  final _passwordController = TextEditingController(text: 'password123');
-  final _businessNameController = TextEditingController();
-  final _ownerNameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
 
   bool _isSignIn = true;
   bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
   late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _isSignIn = !widget.initialIsSignUp;
+    _tabController = TabController(
+      length: 2,
+      vsync: this,
+      initialIndex: widget.initialIsSignUp ? 1 : 0,
+    );
     _tabController.addListener(() {
-      setState(() {
-        _isSignIn = _tabController.index == 0;
-      });
-      _formKey.currentState?.reset();
+      if (!_tabController.indexIsChanging) {
+        setState(() {
+          _isSignIn = _tabController.index == 0;
+        });
+        ref.read(authControllerProvider.notifier).clearError();
+        _formKey.currentState?.reset();
+      }
     });
   }
 
@@ -44,33 +57,225 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
-    _businessNameController.dispose();
-    _ownerNameController.dispose();
+    _confirmPasswordController.dispose();
     _tabController.dispose();
     super.dispose();
   }
 
-  void _submit() async {
-    if (_formKey.currentState?.validate() ?? false) {
-      bool success = false;
-      if (_isSignIn) {
-        success = await ref.read(authControllerProvider.notifier).signIn(
-              _emailController.text.trim(),
-              _passwordController.text,
-            );
-      } else {
-        success = await ref.read(authControllerProvider.notifier).signUp(
-              email: _emailController.text.trim(),
-              password: _passwordController.text,
-              businessName: _businessNameController.text.trim(),
-              ownerName: _ownerNameController.text.trim(),
-            );
-      }
+  Future<void> _submit() async {
+    ref.read(authControllerProvider.notifier).clearError();
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      return;
+    }
 
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    if (_isSignIn) {
+      final success = await ref.read(authControllerProvider.notifier).signIn(
+            email,
+            password,
+          );
       if (success && mounted) {
-        context.go(RouteNames.dashboard);
+        final authState = ref.read(authControllerProvider);
+        if (authState.isBusinessSetupComplete) {
+          context.go(RouteNames.dashboard);
+        } else {
+          context.go(RouteNames.businessSetup);
+        }
+      }
+    } else {
+      final success = await ref.read(authControllerProvider.notifier).signUp(
+            email: email,
+            password: password,
+          );
+      if (success && mounted) {
+        context.go(RouteNames.businessSetup);
       }
     }
+  }
+
+  void _showForgotPasswordSheet() {
+    final resetEmailController =
+        TextEditingController(text: _emailController.text.trim());
+    final resetFormKey = GlobalKey<FormState>();
+    bool isSubmittingReset = false;
+    String? resetSuccessMsg;
+    String? resetErrorMsg;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: 20,
+                bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 28,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Handle
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceVariant,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  Text(
+                    'Reset Password',
+                    style: AppTypography.headlineMedium.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "Enter your registered email address and we'll send you instructions to reset your password.",
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  if (resetSuccessMsg != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppColors.successContainer,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.check_circle_outline,
+                              color: AppColors.success, size: 22),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              resetSuccessMsg!,
+                              style: AppTypography.bodySmall.copyWith(
+                                color: AppColors.onSuccessContainer,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    PrimaryButton(
+                      label: 'Back to Sign In',
+                      onPressed: () => Navigator.pop(sheetContext),
+                    ),
+                  ] else ...[
+                    if (resetErrorMsg != null) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color:
+                              AppColors.errorContainer.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.errorContainer),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.error_outline,
+                                color: AppColors.error, size: 20),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                resetErrorMsg!,
+                                style: AppTypography.bodySmall
+                                    .copyWith(color: AppColors.error),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    Form(
+                      key: resetFormKey,
+                      child: TextFormField(
+                        controller: resetEmailController,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: InputDecoration(
+                          labelText: 'Email Address',
+                          hintText: 'name@business.com',
+                          prefixIcon: const Icon(Icons.email_outlined),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) {
+                            return 'Please enter your email';
+                          }
+                          if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                              .hasMatch(val.trim())) {
+                            return 'Please enter a valid email address';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    PrimaryButton(
+                      label: 'Send Instructions',
+                      isLoading: isSubmittingReset,
+                      onPressed: () async {
+                        if (resetFormKey.currentState?.validate() ?? false) {
+                          setModalState(() {
+                            isSubmittingReset = true;
+                            resetErrorMsg = null;
+                          });
+
+                          try {
+                            await ref
+                                .read(authRepositoryProvider)
+                                .sendPasswordResetEmail(
+                                    resetEmailController.text.trim());
+                            setModalState(() {
+                              isSubmittingReset = false;
+                              resetSuccessMsg =
+                                  "If an account exists for this email, we've sent instructions to reset your password.";
+                            });
+                          } catch (e) {
+                            setModalState(() {
+                              isSubmittingReset = false;
+                              var msg = e.toString();
+                              if (msg.startsWith('Exception: ')) {
+                                msg = msg.substring(11);
+                              }
+                              resetErrorMsg = msg;
+                            });
+                          }
+                        }
+                      },
+                    ),
+                  ],
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -104,7 +309,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                             gradient: const LinearGradient(
                               colors: [
                                 AppColors.primary,
-                                AppColors.primaryContainer
+                                AppColors.primaryContainer,
                               ],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
@@ -140,7 +345,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                       Text(
                         _isSignIn
                             ? 'Welcome back! Log in to manage collections.'
-                            : 'Set up your business to start tracking dues.',
+                            : 'Create an account to start tracking dues.',
                         style: AppTypography.bodyMedium.copyWith(
                           color: AppColors.onSurfaceVariant,
                         ),
@@ -195,6 +400,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
+                            // Error Banner
                             if (authState.error != null) ...[
                               Container(
                                 padding: const EdgeInsets.symmetric(
@@ -224,58 +430,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                               const SizedBox(height: 20),
                             ],
 
-                            // Sign Up Only Fields (Business Information)
-                            AnimatedSize(
-                              duration: const Duration(milliseconds: 250),
-                              curve: Curves.easeInOut,
-                              child: Column(
-                                children: [
-                                  if (!_isSignIn) ...[
-                                    TextFormField(
-                                      controller: _businessNameController,
-                                      decoration: InputDecoration(
-                                        labelText: 'Business Name',
-                                        hintText:
-                                            'e.g. Apex Martial Arts Academy',
-                                        prefixIcon: const Icon(Icons.business),
-                                        border: OutlineInputBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(16),
-                                        ),
-                                      ),
-                                      validator: (val) => val == null ||
-                                              val.trim().isEmpty
-                                          ? 'Please enter your business name'
-                                          : null,
-                                    ),
-                                    const SizedBox(height: 18),
-                                    TextFormField(
-                                      controller: _ownerNameController,
-                                      decoration: InputDecoration(
-                                        labelText: 'Owner / Contact Name',
-                                        hintText: 'e.g. Sensei Alex Rivera',
-                                        prefixIcon:
-                                            const Icon(Icons.person_outline),
-                                        border: OutlineInputBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(16),
-                                        ),
-                                      ),
-                                      validator: (val) =>
-                                          val == null || val.trim().isEmpty
-                                              ? 'Please enter your name'
-                                              : null,
-                                    ),
-                                    const SizedBox(height: 18),
-                                  ],
-                                ],
-                              ),
-                            ),
-
-                            // Common Fields: Email
+                            // Email Field
                             TextFormField(
                               controller: _emailController,
                               keyboardType: TextInputType.emailAddress,
+                              enabled: !authState.isLoading,
                               decoration: InputDecoration(
                                 labelText: 'Email Address',
                                 hintText: 'name@business.com',
@@ -297,10 +456,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                             ),
                             const SizedBox(height: 18),
 
-                            // Common Fields: Password
+                            // Password Field
                             TextFormField(
                               controller: _passwordController,
                               obscureText: _obscurePassword,
+                              enabled: !authState.isLoading,
                               decoration: InputDecoration(
                                 labelText: 'Password',
                                 prefixIcon: const Icon(Icons.lock_outline),
@@ -317,10 +477,87 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                       _obscurePassword = !_obscurePassword),
                                 ),
                               ),
-                              validator: (val) => val == null || val.length < 6
-                                  ? 'Password must be at least 6 characters long'
-                                  : null,
+                              validator: (val) {
+                                if (val == null || val.isEmpty) {
+                                  return 'Please enter a password';
+                                }
+                                if (val.length < 6) {
+                                  return 'Password must be at least 6 characters';
+                                }
+                                return null;
+                              },
                             ),
+
+                            // Confirm Password (Sign Up Only)
+                            AnimatedSize(
+                              duration: const Duration(milliseconds: 250),
+                              curve: Curves.easeInOut,
+                              child: Column(
+                                children: [
+                                  if (!_isSignIn) ...[
+                                    const SizedBox(height: 18),
+                                    TextFormField(
+                                      controller: _confirmPasswordController,
+                                      obscureText: _obscureConfirmPassword,
+                                      enabled: !authState.isLoading,
+                                      decoration: InputDecoration(
+                                        labelText: 'Confirm Password',
+                                        prefixIcon:
+                                            const Icon(Icons.lock_reset),
+                                        border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(16),
+                                        ),
+                                        suffixIcon: IconButton(
+                                          icon: Icon(
+                                            _obscureConfirmPassword
+                                                ? Icons.visibility_off_outlined
+                                                : Icons.visibility_outlined,
+                                          ),
+                                          onPressed: () => setState(() =>
+                                              _obscureConfirmPassword =
+                                                  !_obscureConfirmPassword),
+                                        ),
+                                      ),
+                                      validator: (val) {
+                                        if (_isSignIn) return null;
+                                        if (val == null || val.isEmpty) {
+                                          return 'Please confirm your password';
+                                        }
+                                        if (val != _passwordController.text) {
+                                          return 'Passwords do not match';
+                                        }
+                                        return null;
+                                      },
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+
+                            // Forgot Password link (Sign In only)
+                            if (_isSignIn) ...[
+                              const SizedBox(height: 12),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton(
+                                  onPressed: authState.isLoading
+                                      ? null
+                                      : _showForgotPasswordSheet,
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 4),
+                                  ),
+                                  child: Text(
+                                    'Forgot Password?',
+                                    style: AppTypography.labelLarge.copyWith(
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -328,7 +565,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                       const Spacer(),
                       const SizedBox(height: 32),
 
-                      // Submit Button & Loading State
+                      // Submit Button
                       SizedBox(
                         width: double.infinity,
                         height: 56,

@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -19,16 +18,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   late Animation<double> _fadeAnimation;
-  double _progress = 0.0;
-
-  Timer? _timer;
+  bool _hasNavigated = false;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1400),
+      duration: const Duration(milliseconds: 900),
     );
 
     _scaleAnimation = Tween<double>(begin: 0.85, end: 1.0).animate(
@@ -41,47 +38,46 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     _controller.forward();
 
-    // Progress simulation with cancelable timer
-    int count = 0;
-    _timer = Timer.periodic(const Duration(milliseconds: 70), (timer) {
-      count++;
-      if (mounted) {
-        setState(() {
-          _progress = count / 20;
-        });
-      }
-      if (count >= 20) {
-        timer.cancel();
-        if (mounted) {
-          _navigateToNext();
-        }
-      }
+    // Trigger initial auth check
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(authControllerProvider.notifier).reloadUser();
     });
   }
 
-  void _navigateToNext() {
-    _timer?.cancel();
-    final user = ref.read(authControllerProvider).user;
-    if (user != null && user.isSetupComplete) {
-      context.go(RouteNames.dashboard);
-    } else {
+  void _checkAndNavigate(AuthState authState) {
+    if (_hasNavigated || !mounted || !authState.isInitialized) return;
+
+    _hasNavigated = true;
+    if (!authState.isAuthenticated) {
       context.go(RouteNames.welcome);
+    } else if (!authState.isBusinessSetupComplete) {
+      context.go(RouteNames.businessSetup);
+    } else {
+      context.go(RouteNames.dashboard);
     }
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
     _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authControllerProvider);
+
+    // Listen for state changes
+    ref.listen<AuthState>(authControllerProvider, (_, next) {
+      if (next.isInitialized && !_hasNavigated) {
+        _checkAndNavigate(next);
+      }
+    });
+
     return Scaffold(
       backgroundColor: AppColors.primary,
       body: GestureDetector(
-        onTap: _navigateToNext,
+        onTap: () => _checkAndNavigate(authState),
         behavior: HitTestBehavior.opaque,
         child: Stack(
           children: [
@@ -162,7 +158,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
                           // Tagline
                           Text(
-                            'Know what you\'re owed. Never miss a payment.',
+                            "Know what you're owed. Never miss a payment.",
                             style: AppTypography.titleMedium.copyWith(
                               color: AppColors.primaryFixed,
                               fontSize: 14,
@@ -180,7 +176,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                                 ClipRRect(
                                   borderRadius: BorderRadius.circular(8),
                                   child: LinearProgressIndicator(
-                                    value: _progress,
                                     backgroundColor:
                                         Colors.black.withValues(alpha: 0.2),
                                     valueColor:
@@ -192,7 +187,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  'LOADING ${(_progress * 100).toInt()}%',
+                                  authState.isInitialized
+                                      ? 'READY'
+                                      : 'INITIALIZING...',
                                   style: AppTypography.labelSmall.copyWith(
                                     color: AppColors.primaryFixedDim,
                                     fontSize: 10,
@@ -208,20 +205,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                     ),
                   );
                 },
-              ),
-            ),
-
-            // Tap hint at bottom
-            Positioned(
-              bottom: 32,
-              left: 0,
-              right: 0,
-              child: Text(
-                'Tap anywhere to skip',
-                style: AppTypography.bodySmall.copyWith(
-                  color: Colors.white.withValues(alpha: 0.5),
-                ),
-                textAlign: TextAlign.center,
               ),
             ),
           ],

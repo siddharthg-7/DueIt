@@ -1,25 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dueit/core/routing/route_names.dart';
 import 'package:dueit/core/theme/app_colors.dart';
 import 'package:dueit/core/theme/app_typography.dart';
 import 'package:dueit/shared/widgets/app_text_field.dart';
 import 'package:dueit/shared/widgets/primary_button.dart';
+import 'package:dueit/features/auth/presentation/controllers/auth_controller.dart';
 
 /// DueIt Business Setup Screen (matches Google Stitch design)
-class BusinessSetupScreen extends StatefulWidget {
+class BusinessSetupScreen extends ConsumerStatefulWidget {
   const BusinessSetupScreen({super.key});
 
   @override
-  State<BusinessSetupScreen> createState() => _BusinessSetupScreenState();
+  ConsumerState<BusinessSetupScreen> createState() =>
+      _BusinessSetupScreenState();
 }
 
-class _BusinessSetupScreenState extends State<BusinessSetupScreen> {
+class _BusinessSetupScreenState extends ConsumerState<BusinessSetupScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _businessNameController =
-      TextEditingController(text: 'Apex Karate Academy');
-  final _descriptionController =
-      TextEditingController(text: 'Martial arts and fitness training studio.');
+  final _businessNameController = TextEditingController();
+  final _descriptionController = TextEditingController();
   String _selectedBusinessType = 'Karate / Martial Arts';
 
   final List<String> _businessTypes = [
@@ -39,14 +40,28 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen> {
     super.dispose();
   }
 
-  void _onContinue() {
-    if (_formKey.currentState?.validate() ?? true) {
+  Future<void> _onContinue() async {
+    ref.read(authControllerProvider.notifier).clearError();
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      return;
+    }
+
+    final success =
+        await ref.read(authControllerProvider.notifier).saveBusinessProfile(
+              businessName: _businessNameController.text.trim(),
+              businessType: _selectedBusinessType,
+              description: _descriptionController.text.trim(),
+            );
+
+    if (success && mounted) {
       context.go(RouteNames.dashboard);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authControllerProvider);
+
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: SafeArea(
@@ -94,15 +109,46 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Error Banner if present
+                        if (authState.error != null) ...[
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: AppColors.errorContainer
+                                  .withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(12),
+                              border:
+                                  Border.all(color: AppColors.errorContainer),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.error_outline,
+                                    color: AppColors.error, size: 20),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    authState.error!,
+                                    style: AppTypography.bodyMedium
+                                        .copyWith(color: AppColors.error),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                        ],
+
                         AppTextField(
                           controller: _businessNameController,
                           label: 'Business Name',
                           isRequired: true,
-                          hintText: 'e.g. Apex Martial Arts',
+                          hintText: 'e.g. Apex Martial Arts Academy',
                           prefixIcon: Icons.storefront_outlined,
+                          enabled: !authState.isLoading,
                           validator: (val) =>
                               (val == null || val.trim().isEmpty)
-                                  ? 'Enter business name'
+                                  ? 'Please enter your business name'
                                   : null,
                         ),
                         const SizedBox(height: 18),
@@ -167,11 +213,13 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen> {
                               ),
                             );
                           }).toList(),
-                          onChanged: (val) {
-                            if (val != null) {
-                              setState(() => _selectedBusinessType = val);
-                            }
-                          },
+                          onChanged: authState.isLoading
+                              ? null
+                              : (val) {
+                                  if (val != null) {
+                                    setState(() => _selectedBusinessType = val);
+                                  }
+                                },
                         ),
                         const SizedBox(height: 18),
 
@@ -181,13 +229,15 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen> {
                           hintText: 'Brief summary of services provided...',
                           prefixIcon: Icons.description_outlined,
                           maxLines: 3,
+                          enabled: !authState.isLoading,
                         ),
                         const SizedBox(height: 24),
 
                         PrimaryButton(
-                          label: 'Continue',
+                          label: 'Save & Continue',
                           icon: Icons.arrow_forward,
-                          onPressed: _onContinue,
+                          isLoading: authState.isLoading,
+                          onPressed: authState.isLoading ? null : _onContinue,
                         ),
                       ],
                     ),
@@ -203,7 +253,7 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen> {
                         size: 16, color: AppColors.onSurfaceVariant),
                     const SizedBox(width: 6),
                     Text(
-                      'Your data is secure and encrypted',
+                      'Your data is secure and encrypted with Firebase',
                       style: AppTypography.labelSmall.copyWith(
                         color: AppColors.onSurfaceVariant,
                       ),

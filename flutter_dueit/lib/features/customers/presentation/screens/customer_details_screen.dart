@@ -4,11 +4,13 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:dueit/core/theme/app_colors.dart';
 import 'package:dueit/core/theme/app_typography.dart';
+import 'package:dueit/core/constants/app_constants.dart';
 import 'package:dueit/core/utils/currency_formatter.dart';
 import 'package:dueit/core/utils/date_formatter.dart';
 import 'package:dueit/shared/widgets/app_top_bar.dart';
 import 'package:dueit/shared/widgets/due_card.dart';
 import 'package:dueit/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:dueit/features/customers/domain/entities/customer_entity.dart';
 import 'package:dueit/features/dues/domain/entities/due_entity.dart';
 import 'package:dueit/features/dues/presentation/controllers/dues_controller.dart';
 import 'package:dueit/features/dues/presentation/widgets/payment_receipt_dialog.dart';
@@ -20,6 +22,304 @@ class CustomerDetailsScreen extends ConsumerWidget {
   final String customerId;
 
   const CustomerDetailsScreen({super.key, required this.customerId});
+
+  void _showEditCustomerBottomSheet(
+      BuildContext context, WidgetRef ref, CustomerEntity customer) {
+    final formKey = GlobalKey<FormState>();
+    final nameCtrl = TextEditingController(text: customer.name);
+    final phoneCtrl = TextEditingController(text: customer.phone);
+    final emailCtrl = TextEditingController(text: customer.email ?? '');
+    final notesCtrl = TextEditingController(text: customer.notes ?? '');
+    bool isSaving = false;
+    String? errorMessage;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Container(
+          decoration: const BoxDecoration(
+            color: AppColors.surfaceContainerLowest,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+          ),
+          child: Form(
+            key: formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Edit Client',
+                        style: AppTypography.headlineMedium.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed:
+                            isSaving ? null : () => Navigator.pop(sheetCtx),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  if (errorMessage != null) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: AppColors.errorContainer.withValues(alpha: 0.25),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.errorContainer),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.error_outline,
+                              color: AppColors.error, size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              errorMessage!,
+                              style: AppTypography.bodySmall
+                                  .copyWith(color: AppColors.error),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  TextFormField(
+                    controller: nameCtrl,
+                    enabled: !isSaving,
+                    textCapitalization: TextCapitalization.words,
+                    decoration: const InputDecoration(
+                      labelText: 'Client Name *',
+                      prefixIcon: Icon(Icons.person_outline),
+                    ),
+                    validator: (val) {
+                      if (val == null || val.trim().isEmpty) {
+                        return 'Client name is required';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: phoneCtrl,
+                    enabled: !isSaving,
+                    keyboardType: TextInputType.phone,
+                    decoration: const InputDecoration(
+                      labelText: 'Phone Number (Optional)',
+                      prefixIcon: Icon(Icons.phone_outlined),
+                    ),
+                    validator: (val) {
+                      if (val != null && val.trim().isNotEmpty) {
+                        if (val.trim().length < 5) {
+                          return 'Please enter a valid phone number';
+                        }
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: emailCtrl,
+                    enabled: !isSaving,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: const InputDecoration(
+                      labelText: 'Email Address (Optional)',
+                      prefixIcon: Icon(Icons.email_outlined),
+                    ),
+                    validator: (val) {
+                      if (val != null && val.trim().isNotEmpty) {
+                        if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                            .hasMatch(val.trim())) {
+                          return 'Please enter a valid email address';
+                        }
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  Text('Batch / Category Presets',
+                      style: AppTypography.labelSmall),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: AppConstants.batchPresets.map((preset) {
+                      final isSelected = notesCtrl.text == preset;
+                      return ChoiceChip(
+                        label: Text(preset),
+                        selected: isSelected,
+                        selectedColor: AppColors.primary,
+                        labelStyle: TextStyle(
+                          color: isSelected
+                              ? AppColors.onPrimary
+                              : AppColors.onSurface,
+                          fontSize: 11,
+                        ),
+                        onSelected: isSaving
+                            ? null
+                            : (selected) {
+                                setModalState(() {
+                                  notesCtrl.text = selected ? preset : '';
+                                });
+                              },
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: notesCtrl,
+                    enabled: !isSaving,
+                    decoration: const InputDecoration(
+                      labelText: 'Custom Batch or Notes (Optional)',
+                      prefixIcon: Icon(Icons.notes_outlined),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: FilledButton(
+                      onPressed: isSaving
+                          ? null
+                          : () async {
+                              if (!(formKey.currentState?.validate() ??
+                                  false)) {
+                                return;
+                              }
+
+                              setModalState(() {
+                                isSaving = true;
+                                errorMessage = null;
+                              });
+
+                              final updated = customer.copyWith(
+                                name: nameCtrl.text.trim(),
+                                phone: phoneCtrl.text.trim(),
+                                email: emailCtrl.text.trim().isEmpty
+                                    ? null
+                                    : emailCtrl.text.trim(),
+                                notes: notesCtrl.text.trim().isEmpty
+                                    ? null
+                                    : notesCtrl.text.trim(),
+                              );
+
+                              final success = await ref
+                                  .read(customerControllerProvider.notifier)
+                                  .updateCustomer(updated);
+
+                              if (success) {
+                                if (sheetCtx.mounted) {
+                                  Navigator.pop(sheetCtx);
+                                }
+                              } else {
+                                setModalState(() {
+                                  isSaving = false;
+                                  errorMessage = ref
+                                          .read(customerControllerProvider)
+                                          .error ??
+                                      'Failed to update client.';
+                                });
+                              }
+                            },
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: isSaving
+                          ? const SizedBox(
+                              height: 22,
+                              width: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : const Text(
+                              'Save Changes',
+                              style: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _confirmDeleteCustomer(
+      BuildContext context, WidgetRef ref, CustomerEntity customer) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'Delete ${customer.name}?',
+          style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'This will permanently remove this customer from your business records.',
+          style: AppTypography.bodyMedium,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              Navigator.pop(dialogCtx);
+              final success = await ref
+                  .read(customerControllerProvider.notifier)
+                  .deleteCustomer(customer.id);
+              if (context.mounted) {
+                if (success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('${customer.name} removed.')),
+                  );
+                  context.pop();
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                          ref.read(customerControllerProvider).error ??
+                              'Failed to delete client.'),
+                      backgroundColor: AppColors.error,
+                    ),
+                  );
+                }
+              }
+            },
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.error,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -33,8 +333,16 @@ class CustomerDetailsScreen extends ConsumerWidget {
 
     if (customer == null) {
       return Scaffold(
-        appBar: const AppTopBar(title: 'Client Details', showBack: true),
-        body: const Center(child: Text('Client not found.')),
+        appBar: AppTopBar(
+          title: 'Client Details',
+          showBack: true,
+          onBack: () => context.pop(),
+        ),
+        body: Center(
+          child: customerState.isLoading
+              ? const CircularProgressIndicator(color: AppColors.primary)
+              : const Text('Client not found.'),
+        ),
       );
     }
 
@@ -88,22 +396,67 @@ class CustomerDetailsScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  Container(
-                    width: 72,
-                    height: 72,
-                    decoration: const BoxDecoration(
-                      color: AppColors.primary,
-                      shape: BoxShape.circle,
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      customer.calculatedInitials,
-                      style: const TextStyle(
-                        color: AppColors.onPrimary,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const SizedBox(width: 40),
+                      Container(
+                        width: 72,
+                        height: 72,
+                        decoration: const BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          customer.calculatedInitials,
+                          style: const TextStyle(
+                            color: AppColors.onPrimary,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
-                    ),
+                      PopupMenuButton<String>(
+                        icon: const Icon(Icons.more_vert,
+                            color: AppColors.onSurfaceVariant),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
+                        onSelected: (val) {
+                          if (val == 'edit') {
+                            _showEditCustomerBottomSheet(
+                                context, ref, customer);
+                          } else if (val == 'delete') {
+                            _confirmDeleteCustomer(context, ref, customer);
+                          }
+                        },
+                        itemBuilder: (ctx) => [
+                          const PopupMenuItem(
+                            value: 'edit',
+                            child: Row(
+                              children: [
+                                Icon(Icons.edit_outlined,
+                                    size: 18, color: AppColors.primary),
+                                SizedBox(width: 10),
+                                Text('Edit Client'),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'delete',
+                            child: Row(
+                              children: [
+                                Icon(Icons.delete_outline,
+                                    size: 18, color: AppColors.error),
+                                SizedBox(width: 10),
+                                Text('Delete Client',
+                                    style: TextStyle(color: AppColors.error)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 12),
                   Text(
@@ -116,7 +469,16 @@ class CustomerDetailsScreen extends ConsumerWidget {
                     'Client since ${customer.clientSince}',
                     style: AppTypography.bodySmall,
                   ),
-                  if (customer.notes != null) ...[
+                  if (customer.email != null && customer.email!.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      customer.email!,
+                      style: AppTypography.bodySmall.copyWith(
+                        color: AppColors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                  if (customer.notes != null && customer.notes!.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -138,19 +500,21 @@ class CustomerDetailsScreen extends ConsumerWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      OutlinedButton.icon(
-                        onPressed: () async {
-                          final uri = Uri.parse('tel:${customer.phone}');
-                          if (await canLaunchUrl(uri)) await launchUrl(uri);
-                        },
-                        icon: const Icon(Icons.call, size: 16),
-                        label: Text(customer.phone,
-                            style: const TextStyle(fontSize: 12)),
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size(120, 36),
+                      if (customer.phone.isNotEmpty) ...[
+                        OutlinedButton.icon(
+                          onPressed: () async {
+                            final uri = Uri.parse('tel:${customer.phone}');
+                            if (await canLaunchUrl(uri)) await launchUrl(uri);
+                          },
+                          icon: const Icon(Icons.call, size: 16),
+                          label: Text(customer.phone,
+                              style: const TextStyle(fontSize: 12)),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(120, 36),
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
+                        const SizedBox(width: 8),
+                      ],
                       FilledButton.icon(
                         onPressed: sendWhatsAppStatement,
                         icon: const Icon(Icons.chat, size: 16),

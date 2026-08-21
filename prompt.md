@@ -1,441 +1,630 @@
-We are now starting STEP 3 of the DueIt production implementation.
+We are now starting STEP 4 of the DueIt production implementation.
 
-The Flutter foundation has already been created and verified.
+STEP 3 is complete and verified.
 
-Now focus ONLY on implementing the DueIt visual design system and application navigation.
+The Flutter visual design system, reusable components, application shell, routes, static screens, tests, analysis, and debug APK are already working.
 
-DO NOT implement Firebase authentication yet.
-DO NOT implement Firestore yet.
-DO NOT implement notifications yet.
-DO NOT implement customer CRUD yet.
-DO NOT implement payment business logic yet.
-DO NOT implement recurring payment logic yet.
+Now implement:
 
-This step is ONLY:
+AUTHENTICATION + BUSINESS SETUP
 
-1. Stitch design system
-2. Flutter theme
-3. Reusable UI components
-4. Application shell
-5. Navigation
-6. Static screen layouts
-7. Responsive mobile behavior
+Do not implement customers, dues, payments, reminders, recurring payments, or insights yet.
 
 ==================================================
-SOURCE OF TRUTH
+STEP 4 OBJECTIVE
 ==================================================
 
-The original Google Stitch designs are the visual source of truth.
+Turn the existing static authentication flow into a real Firebase Authentication flow while preserving the existing Stitch-based UI exactly.
 
-The Google AI Studio TypeScript prototype is NOT the visual source of truth.
+The production flow should be:
 
-If the AI Studio implementation differs from Stitch, follow Stitch.
+Splash
+→ Check authentication state
+→ Welcome
+→ Login / Create Account
+→ Business Setup
+→ Home
 
-Do not invent a new design.
+For returning users:
 
-==================================================
-DUEIT DESIGN PRINCIPLES
-==================================================
-
-DueIt should feel:
-
-- Professional
-- Simple
-- Trustworthy
-- Calm
-- Modern
-- Friendly
-- Financial but not like complicated accounting software
-- Easy for a non-technical small business owner
-- Fast and action-oriented
-
-The most important information in the app is:
-
-"How much money do I need to collect today?"
-
-The interface should prioritize clarity over information density.
+Splash
+→ Check authentication state
+→ Check business profile
+→ Home OR Business Setup
 
 ==================================================
-SCREENS TO IMPLEMENT
+AUTHENTICATION
 ==================================================
 
-Implement the static Flutter UI for the following screens based on the Stitch designs:
+Use:
 
-1. Splash
-2. Welcome / onboarding
-3. Login
-4. Business setup
-5. Home dashboard
-6. Add Due
-7. Due details
-8. People
-9. Person details
-10. All dues
-11. Notifications
-12. Insights
-13. Settings if present in the Stitch design
+Firebase Authentication
+Email + Password
 
-Use realistic static/mock data only for visual rendering.
+Do not add:
 
-Do not implement persistence yet.
+- Google Sign-In
+- Phone OTP
+- Apple Sign-In
+- Facebook
+- Anonymous authentication
+
+Those are not part of the current MVP.
 
 ==================================================
-HOME SCREEN
+FIREBASE SETUP
 ==================================================
 
-The Home screen is the most important screen.
+Inspect the existing Flutter project first.
 
-Its visual hierarchy should communicate:
+Determine whether Firebase has already been configured.
 
-Today's Collection
+If Firebase is NOT configured:
 
-₹8,500
+Set up the project using the standard FlutterFire workflow.
 
-5 payments
+Use:
 
-Then:
+firebase_core
+firebase_auth
 
-Overdue
-₹4,000
+Do not manually hardcode Firebase configuration values.
 
-Then:
+Do not expose private credentials or secrets.
 
-Upcoming
-₹18,500
+Do not create a custom backend authentication system.
 
-Then:
+Use the existing Firebase project if the project configuration is already present.
 
-Monthly summary
-
-Use the exact visual hierarchy from Stitch.
-
-Do not redesign the screen.
-
-Do not make charts more prominent than today's collection.
+If Firebase configuration requires a manual Firebase Console action, clearly tell me exactly what I need to enable/configure rather than inventing credentials.
 
 ==================================================
-ADD DUE SCREEN
+REGISTRATION
 ==================================================
 
-The Add Due screen should visually support:
+Implement a real account creation flow.
 
-Customer/person
-Amount
-Description/reason
-Due date
-Reminder
-Recurrence
+Required:
 
-Example:
+Email
+Password
+Confirm Password
 
-Who?
-Rahul Kumar
+Validation:
 
-Amount
-₹1,500
+- email cannot be empty
+- email must be valid
+- password cannot be empty
+- password must satisfy Firebase password requirements
+- confirmation must match password
 
-For
-August Karate Fee
+Use Firebase:
 
-Due date
-25 Aug 2026
+createUserWithEmailAndPassword()
 
-Reminder
-1 day before
+After successful registration:
 
-Repeat
-Monthly
+1. User becomes authenticated.
+2. Continue to Business Setup.
+3. Do not send the user directly to Home unless a business profile already exists.
 
-Create Due
+Handle Firebase authentication errors gracefully.
 
-These are currently visual/static controls only.
+Do not expose raw technical Firebase error messages directly to users.
 
-Production functionality will be added later.
-
-==================================================
-DUE STATUS COMPONENTS
-==================================================
-
-Implement reusable status components for:
-
-UPCOMING
-DUE
-OVERDUE
-PARTIALLY_PAID
-PAID
-CANCELLED
-
-Follow the Stitch visual language.
-
-Do not use excessive colors.
-
-Status colors should be accessible and consistent.
-
-==================================================
-REUSABLE COMPONENTS
-==================================================
-
-Create reusable Flutter widgets where appropriate.
+Convert common errors into understandable messages.
 
 Examples:
 
-DueCard
-CustomerCard
-CollectionSummaryCard
-AmountDisplay
-StatusBadge
-PrimaryButton
-SecondaryButton
-AppTextField
-DateSelector
-ReminderSelector
-RecurrenceSelector
-SectionHeader
-EmptyState
-SearchField
-BottomNavigation
-AppBar
-
-Do not duplicate visually identical components.
-
-If an existing reusable component already exists from STEP 2, improve/reuse it instead of creating a duplicate.
+"An account with this email already exists."
+"Please enter a valid email address."
+"Your password is too weak."
+"Unable to create your account. Please try again."
 
 ==================================================
-TYPOGRAPHY
+LOGIN
 ==================================================
 
-Implement the typography hierarchy from Stitch.
+Implement:
 
-Pay particular attention to:
+Email
+Password
 
-- Currency amounts
-- Page titles
-- Section headings
-- Due dates
-- Customer names
-- Status labels
-- Button labels
-- Secondary information
+Use:
 
-Currency values should have strong visual hierarchy.
+signInWithEmailAndPassword()
 
-For example:
+Handle common failure cases.
 
-₹8,500
+Do not reveal unnecessary information that could help enumerate accounts.
 
-should immediately communicate more importance than:
+Show friendly errors such as:
 
-To collect today
+"Email or password is incorrect."
 
-while still following the exact Stitch design.
+Include the existing Stitch-designed:
+
+Forgot Password
+
+flow.
 
 ==================================================
-SPACING AND SHAPES
+PASSWORD RESET
 ==================================================
 
-Use consistent design tokens for:
+Implement password reset using Firebase Authentication.
 
+Use:
+
+sendPasswordResetEmail()
+
+Flow:
+
+Forgot Password
+→ Enter Email
+→ Send Reset Email
+→ Success state
+
+Success message:
+
+"If an account exists for this email, we've sent instructions to reset your password."
+
+Do not expose unnecessary account-existence information.
+
+==================================================
+LOGOUT
+==================================================
+
+Implement logout using Firebase Authentication.
+
+Use:
+
+FirebaseAuth.instance.signOut()
+
+After logout:
+
+→ authentication state changes
+→ user returns to the appropriate unauthenticated screen
+
+Do not simply navigate to Login without actually signing out.
+
+==================================================
+AUTH STATE
+==================================================
+
+Create a proper authentication state layer.
+
+Use Riverpod consistently with the existing architecture.
+
+The application must react to:
+
+authenticated
+unauthenticated
+loading
+
+Do not manually scatter authentication checks across every screen.
+
+Create a centralized authentication state/provider/service.
+
+The application should listen to Firebase authentication state changes.
+
+Do not rely only on checking auth once during app startup.
+
+==================================================
+ROUTING
+==================================================
+
+Use the existing GoRouter architecture.
+
+Implement proper route protection.
+
+Unauthenticated user:
+
+Cannot access:
+
+/dashboard
+/dues
+/customers
+/insights
+/settings
+/customer/:id
+/due/:id
+/add-due
+
+Authenticated user:
+
+Can access the main application.
+
+Do not allow authenticated users to unnecessarily return to Login through normal back navigation.
+
+Handle redirects centrally through the routing/auth architecture.
+
+Do not create redirect loops.
+
+==================================================
+SPLASH
+==================================================
+
+Use the existing Stitch Splash screen.
+
+The splash screen should:
+
+1. Initialize required Firebase state.
+2. Determine authentication state.
+3. Determine whether the user has completed Business Setup.
+4. Navigate appropriately.
+
+Do not use arbitrary delays just to make the splash screen visible.
+
+Do not use:
+
+Future.delayed()
+
+as a substitute for real initialization.
+
+==================================================
+BUSINESS SETUP
+==================================================
+
+After a new user successfully registers, show Business Setup.
+
+The purpose is to collect minimal information about the business.
+
+Required:
+
+Business name
+
+Optional:
+
+Business type/category
+
+Examples:
+
+Karate Academy
+Fitness Studio
+Tuition Center
+Dance Academy
+Freelance Services
+Other
+
+Do not ask unnecessary questions.
+
+The setup should be fast.
+
+==================================================
+BUSINESS PROFILE
+==================================================
+
+For now, conceptually store:
+
+BusinessProfile
+
+Fields:
+
+id
+ownerId
+businessName
+businessType
+createdAt
+updatedAt
+
+The ownerId must correspond to the Firebase authenticated user's UID.
+
+Do not associate business data using email addresses.
+
+Use Firebase UID as the identity key.
+
+==================================================
+BUSINESS PROFILE STORAGE
+==================================================
+
+Use Cloud Firestore for the production business profile.
+
+Recommended conceptual structure:
+
+users/{uid}
+
+or an equivalent secure structure that works cleanly with the future DueIt data model.
+
+Before implementing the collection structure, inspect the existing architecture and choose a structure that will scale cleanly to:
+
+customers
+dues
+payments
+reminders
+business settings
+
+Do not create a complicated multi-tenant architecture yet.
+
+One authenticated account should own one DueIt business in the MVP.
+
+==================================================
+SECURITY
+==================================================
+
+Do not leave Firestore open to everyone.
+
+Create security rules so that an authenticated user can only access their own business data.
+
+Do not use:
+
+allow read, write: if true;
+
+Do not create insecure test rules.
+
+The authenticated Firebase UID must be used to determine ownership.
+
+If rules require Firebase Console deployment/configuration, explain what needs to be done.
+
+==================================================
+BUSINESS SETUP BEHAVIOR
+==================================================
+
+After registration:
+
+User
+→ Business Setup
+→ Enter Business Name
+→ Select optional business type
+→ Save
+→ Business profile created
+→ Navigate Home
+
+After successful setup:
+
+The Home screen should display the business context appropriately if the Stitch design includes it.
+
+Do not redesign the Home screen.
+
+==================================================
+RETURNING USERS
+==================================================
+
+When the app is reopened:
+
+If authenticated AND business profile exists:
+
+→ Home
+
+If authenticated BUT business profile does not exist:
+
+→ Business Setup
+
+If unauthenticated:
+
+→ Welcome/Login
+
+Do not force a logged-in user through Business Setup every time.
+
+==================================================
+ERROR HANDLING
+==================================================
+
+Handle:
+
+- no internet connection
+- Firebase unavailable
+- invalid credentials
+- weak password
+- duplicate email
+- password mismatch
+- empty fields
+- invalid email
+- Firestore failure
+- timeout
+
+Use friendly UI states.
+
+Do not crash.
+
+Do not expose stack traces to the user.
+
+==================================================
+LOADING STATES
+==================================================
+
+Every asynchronous authentication/business operation must have a proper loading state.
+
+Examples:
+
+Signing in...
+Creating account...
+Saving business...
+
+Prevent duplicate submissions while an operation is running.
+
+Disable the primary button while submitting.
+
+==================================================
+DESIGN REQUIREMENT
+==================================================
+
+DO NOT redesign the existing Stitch screens.
+
+Preserve:
+
+- colors
+- typography
 - spacing
-- corner radius
-- elevation
-- borders
-- icon sizes
-- touch targets
+- button styles
+- input styles
+- cards
+- navigation
+- illustrations
+- hierarchy
+- animations if already present
 
-Do not hardcode random values repeatedly throughout widgets.
+Only add the necessary states:
 
-Create centralized theme/design constants where appropriate.
+- loading
+- validation error
+- Firebase error
+- success
 
-==================================================
-NAVIGATION
-==================================================
-
-Implement the application navigation structure.
-
-Primary navigation:
-
-Home
-Dues
-People
-Insights
-
-Settings should be accessible through the appropriate secondary navigation location according to the Stitch design.
-
-Implement routes using GoRouter.
-
-The navigation should work between the static screens.
-
-Example:
-
-Home
-→ Add Due
-→ Due Details
-
-Home
-→ People
-→ Person Details
-
-Home
-→ Notifications
-
-Home
-→ Insights
-
-Dues
-→ Due Details
-
-People
-→ Person Details
+These states should use the existing DueIt design system.
 
 ==================================================
-BOTTOM NAVIGATION
+ARCHITECTURE
 ==================================================
 
-Use the exact Stitch bottom navigation design.
+Follow the existing feature-based Flutter architecture.
 
-Do not add unnecessary navigation items.
+Authentication should have appropriate separation between:
 
-The navigation should:
+- data/service layer
+- authentication state
+- repository/service where appropriate
+- presentation
+- routing
 
-- preserve selected state
-- animate only if consistent with the Stitch design
-- maintain navigation state appropriately
-- work correctly with GoRouter
+Do not put Firebase calls directly into UI widgets.
 
-==================================================
-MOCK DATA
-==================================================
+Do not put business setup Firestore calls directly into widgets.
 
-Use realistic mock data for visual rendering.
-
-Example customers:
-
-Rahul Kumar
-Arjun Sharma
-Sneha Reddy
-Vikram Rao
-
-Example dues:
-
-Rahul Kumar
-₹1,500
-August Karate Fee
-Due Today
-
-Arjun Sharma
-₹2,000
-Monthly Membership
-Due Today
-
-Sneha Reddy
-₹1,500
-August Tuition
-Paid
-
-Vikram Rao
-₹2,500
-Monthly Training
-Overdue
-
-Do not store this as production data.
-
-This is only for visual development.
+Keep widgets focused on presentation and user interaction.
 
 ==================================================
-EMPTY STATES
+TESTING
 ==================================================
 
-Create appropriate empty states for:
+Add/update tests where practical.
 
-No customers
-No dues
-No payments today
-No upcoming payments
-No overdue payments
-No notifications
+At minimum verify:
 
-Follow the Stitch design language.
+1. Unauthenticated state routes to authentication.
+2. Authenticated state is recognized.
+3. Registration validation works.
+4. Password confirmation validation works.
+5. Login validation works.
+6. Password reset validation works.
+7. Business setup validation works.
+8. Logout clears authentication state.
+9. Authenticated users cannot access unauthenticated-only screens.
+10. Unauthenticated users cannot access protected application screens.
 
-==================================================
-MOBILE REQUIREMENTS
-==================================================
+Do not write tests that depend on real production Firebase credentials unless the project already has an appropriate test setup.
 
-This is a mobile application.
-
-Prioritize:
-
-- one-handed use
-- comfortable touch targets
-- safe areas
-- keyboard behavior
-- scrolling
-- small Android screens
-- different Android screen sizes
-
-Avoid horizontal overflow.
-
-Do not design for desktop.
+Use mocks/fakes for unit-level tests where appropriate.
 
 ==================================================
-ACCESSIBILITY
-==================================================
-
-Ensure:
-
-- sufficient contrast
-- readable text
-- accessible touch targets
-- meaningful semantic labels
-- icons are not the only indication of meaning
-- status information is also communicated through text
-
-==================================================
-QUALITY CHECK
+MANUAL VERIFICATION
 ==================================================
 
 After implementation:
 
-1. Run dart format.
-2. Run flutter analyze.
-3. Run available tests.
-4. Build/run the application.
-5. Check every implemented screen.
-6. Check navigation.
-7. Check for overflow.
-8. Check keyboard/input layouts.
-9. Check bottom navigation.
-10. Check small-screen behavior.
+Run:
 
-Fix all compilation errors and obvious UI issues.
+dart format .
+flutter analyze
+flutter test
+flutter build apk --debug
+
+Also run the application and manually verify:
+
+TEST A — NEW USER
+
+Welcome
+→ Create Account
+→ Email
+→ Password
+→ Confirm Password
+→ Register
+→ Business Setup
+→ Enter Business Name
+→ Save
+→ Home
+
+TEST B — EXISTING USER
+
+Login
+→ Email
+→ Password
+→ Home
+
+TEST C — INVALID LOGIN
+
+Wrong credentials
+→ Friendly error
+→ Remains on Login
+
+TEST D — PASSWORD RESET
+
+Forgot Password
+→ Email
+→ Submit
+→ Success state
+
+TEST E — LOGOUT
+
+Home
+→ Settings
+→ Logout
+→ Authentication screen
+
+TEST F — APP RESTART
+
+Authenticated user closes/reopens app
+→ Should remain authenticated
+→ Should return to Home if business setup is complete
+
+TEST G — AUTH GUARD
+
+Attempt to access protected routes while logged out
+→ Should redirect to authentication
 
 ==================================================
-IMPORTANT RESTRICTION
+DO NOT IMPLEMENT YET
 ==================================================
 
-Do not implement backend functionality in this step.
+Do NOT implement:
 
-Do not implement:
-
-Firebase Auth
-Firestore
+Customers
+Dues
+Payments
+Payment history
+Recurring payments
+Reminders
+Notifications
+Insights logic
+SQLite
+Offline synchronization
 FCM
-SQLite persistence
-Local notifications
-Recurring-payment calculations
-Payment calculations
-Customer CRUD
-Production data repositories
+WhatsApp
+UPI
+AI features
 
-Only build the visual system and navigation.
+Those belong to later implementation stages.
 
-When finished, provide a concise report containing:
+==================================================
+FINAL VALIDATION
+==================================================
 
-1. Screens implemented
-2. Components created/reused
-3. Routes created
-4. Design-system changes
-5. Validation performed
-6. Any remaining visual differences from Stitch
-7. Any issues that need attention before moving to authentication
+Before declaring STEP 4 complete:
 
-Keep the application in a working state.
+- flutter analyze must have 0 issues
+- tests must pass
+- debug APK must build successfully
+- authentication must be real Firebase Authentication
+- business setup must persist correctly
+- protected routes must work
+- logout must work
+- app restart/auth persistence must work
+- no existing Stitch visual design should be unnecessarily changed
+
+When finished, report:
+
+1. Files created/changed
+2. Firebase packages added
+3. Firebase configuration status
+4. Authentication flow implemented
+5. Business profile implementation
+6. Firestore structure chosen
+7. Security rules created/changed
+8. Routes/auth guards implemented
+9. Tests performed
+10. Build result
+11. Any Firebase Console actions I still need to perform manually
+
+Do not proceed to customer management after completing this step.
+
+Stop after STEP 4 and report the results.
