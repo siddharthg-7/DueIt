@@ -16,6 +16,8 @@ import 'package:dueit/features/dues/presentation/controllers/dues_controller.dar
 import 'package:dueit/features/dues/presentation/widgets/payment_receipt_dialog.dart';
 import 'package:dueit/features/dues/presentation/widgets/record_payment_dialog.dart';
 import 'package:dueit/features/reminders/presentation/controllers/reminder_controller.dart';
+import 'package:dueit/features/communication/presentation/widgets/whatsapp_message_preview_sheet.dart';
+import 'package:dueit/features/communication/presentation/widgets/choose_due_for_reminder_sheet.dart';
 import '../controllers/customer_controller.dart';
 
 class CustomerDetailsScreen extends ConsumerWidget {
@@ -393,6 +395,25 @@ class CustomerDetailsScreen extends ConsumerWidget {
     final totalCollected =
         clientPayments.fold<double>(0, (sum, p) => sum + p.amount);
 
+    void remindCustomer() {
+      if (outstandingDues.isEmpty) return;
+      if (outstandingDues.length == 1) {
+        WhatsAppMessagePreviewSheet.show(
+          context: context,
+          customer: customer,
+          due: outstandingDues.first,
+          businessName: user?.businessName,
+        );
+      } else {
+        ChooseDueForReminderSheet.show(
+          context: context,
+          customer: customer,
+          activeDues: outstandingDues,
+          businessName: user?.businessName,
+        );
+      }
+    }
+
     void sendWhatsAppStatement() async {
       final url = reminderRepo.generateCustomerStatementWhatsAppUrl(
         customer: customer,
@@ -527,33 +548,45 @@ class CustomerDetailsScreen extends ConsumerWidget {
                   ],
                   const SizedBox(height: 16),
 
-                  // WhatsApp Statement & Call Row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  // Action Buttons: Call, Remind, Statement
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
-                      if (customer.phone.isNotEmpty) ...[
+                      if (customer.phone.isNotEmpty)
                         OutlinedButton.icon(
                           onPressed: () async {
                             final uri = Uri.parse('tel:${customer.phone}');
                             if (await canLaunchUrl(uri)) await launchUrl(uri);
                           },
-                          icon: const Icon(Icons.call, size: 16),
+                          icon: const Icon(Icons.call, size: 15),
                           label: Text(customer.phone,
                               style: const TextStyle(fontSize: 12)),
                           style: OutlinedButton.styleFrom(
-                            minimumSize: const Size(120, 36),
+                            minimumSize: const Size(100, 36),
                           ),
                         ),
-                        const SizedBox(width: 8),
-                      ],
+                      if (outstandingDues.isNotEmpty)
+                        FilledButton.icon(
+                          onPressed: remindCustomer,
+                          icon: const Icon(Icons.chat_rounded, size: 15),
+                          label: const Text('Remind',
+                              style: TextStyle(
+                                  fontSize: 12, fontWeight: FontWeight.w700)),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF1E7E34),
+                            minimumSize: const Size(90, 36),
+                          ),
+                        ),
                       FilledButton.icon(
                         onPressed: sendWhatsAppStatement,
-                        icon: const Icon(Icons.chat, size: 16),
+                        icon: const Icon(Icons.receipt_long, size: 15),
                         label: const Text('Statement',
                             style: TextStyle(fontSize: 12)),
                         style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.whatsAppGreen,
-                          minimumSize: const Size(100, 36),
+                          backgroundColor: AppColors.primary,
+                          minimumSize: const Size(90, 36),
                         ),
                       ),
                     ],

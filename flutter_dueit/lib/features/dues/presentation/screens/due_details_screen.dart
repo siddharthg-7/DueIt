@@ -12,7 +12,7 @@ import 'package:dueit/shared/widgets/date_selector.dart';
 import 'package:dueit/shared/widgets/reminder_selector.dart';
 import 'package:dueit/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:dueit/features/customers/presentation/controllers/customer_controller.dart';
-import 'package:dueit/features/reminders/presentation/controllers/reminder_controller.dart';
+import 'package:dueit/features/communication/presentation/widgets/whatsapp_message_preview_sheet.dart';
 import '../../domain/entities/due_entity.dart';
 import '../../domain/entities/payment_record_entity.dart';
 import '../controllers/dues_controller.dart';
@@ -413,7 +413,6 @@ class DueDetailsScreen extends ConsumerWidget {
     final duesState = ref.watch(duesControllerProvider);
     final user = ref.watch(authControllerProvider).user;
     final customerState = ref.watch(customerControllerProvider);
-    final reminderRepo = ref.watch(reminderRepositoryProvider);
 
     final due = duesState.dues.where((d) => d.id == dueId).firstOrNull;
 
@@ -444,18 +443,14 @@ class DueDetailsScreen extends ConsumerWidget {
     final isPaid = due.status == DueStatus.paid;
     final isCancelled = due.status == DueStatus.cancelled;
 
-    void sendWhatsAppReminder() async {
+    void sendWhatsAppReminder() {
       if (customer == null) return;
-      final url = reminderRepo.generateWhatsAppReminderUrl(
-        due: due,
+      WhatsAppMessagePreviewSheet.show(
+        context: context,
         customer: customer,
-        upiId: user?.upiId,
+        due: due,
         businessName: user?.businessName,
       );
-      final uri = Uri.parse(url);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      }
     }
 
     return Scaffold(
@@ -643,26 +638,30 @@ class DueDetailsScreen extends ConsumerWidget {
                     const SizedBox(height: 10),
                   ],
 
-                  // WhatsApp Action Button
-                  if (customer != null && !isCancelled && !isPaid)
+                  // WhatsApp Remind Customer Action Button
+                  if (customer != null &&
+                      customer.phone.isNotEmpty &&
+                      !isCancelled &&
+                      !isPaid &&
+                      due.remainingAmount > 0)
                     SizedBox(
                       width: double.infinity,
-                      height: 44,
+                      height: 46,
                       child: OutlinedButton.icon(
                         onPressed: sendWhatsAppReminder,
-                        icon: const Icon(Icons.chat,
-                            size: 16, color: AppColors.whatsAppDarkGreen),
-                        label: Text(
-                          'Send Reminder on WhatsApp',
+                        icon: const Icon(Icons.chat_rounded,
+                            size: 17, color: Color(0xFF1E7E34)),
+                        label: const Text(
+                          'Remind Customer',
                           style: TextStyle(
-                            fontSize: 13,
-                            color: AppColors.whatsAppDarkGreen,
-                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                            color: Color(0xFF1E7E34),
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                         style: OutlinedButton.styleFrom(
                           side: const BorderSide(
-                              color: AppColors.whatsAppDarkGreen, width: 1),
+                              color: Color(0xFF1E7E34), width: 1.2),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
                           ),

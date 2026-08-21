@@ -1,785 +1,546 @@
-We are now starting STEP 12 of the DueIt production implementation.
+We are starting STEP 13 of DueIt.
 
-This is NOT a feature-development step.
+STEP 12 is complete.
 
-This is a:
+The previous Firestore authorization bug has been fixed and manually verified.
 
-PRODUCTION QA + SECURITY + DATA INTEGRITY AUDIT
-
-The objective is to verify that the existing DueIt implementation behaves correctly as a complete application before we add major new features.
-
-==================================================
-CURRENT VERIFIED STATE
-==================================================
-
-DueIt currently includes:
+Current stable state:
 
 - Firebase Authentication
 - Business setup
-- Customer management
-- Due management
-- Due status calculation
-- Partial payments
-- Full payments
-- Payment history
-- Local reminders
-- Android notifications
-- Recurring dues
-- Monthly / quarterly / yearly recurrence
-- Weekly recurrence
-- Financial planning dashboard
-- Collection trends
-- Needs Attention
-- Firestore offline persistence
+- Customers
+- One-time Dues
+- Recurring Dues
+- Payments
+- Partial Payments
+- Payment History
+- Local Notifications
+- Recurring Reminders
+- Financial Dashboard
+- Offline Firestore persistence
 - Connectivity UX
-- 148 automated tests
+- Hardened Firestore Security Rules
+- Production QA completed
+- 155 automated tests passing
 - flutter analyze = 0 issues
 - Debug APK builds successfully
 
-Do NOT add new product features during this step.
-
-Do NOT add:
-
-- AI
-- WhatsApp
-- SMS
-- Email
-- Payment gateway
-- UPI integration
-- Expenses
-- Accounting
-- New navigation
-- New database
+Do NOT modify existing architecture unnecessarily.
 
 ==================================================
-PART 1 — FULL END-TO-END USER FLOW
+STEP 13 — WHATSAPP COLLECTION ASSISTANT
 ==================================================
 
-Perform a complete audit of the main business flow:
+OBJECTIVE:
 
-New user
-→ Sign up
-→ Business setup
-→ Dashboard
-→ Add Customer
-→ Add Due
-→ Configure Reminder
-→ Save
-→ Due appears
-→ Reminder scheduled
-→ Record partial payment
-→ Remaining amount updates
-→ Record final payment
-→ Due becomes PAID
-→ Reminder cancelled
-→ Dashboard updates
+Allow a business owner to quickly send a payment reminder to a customer through WhatsApp using a pre-filled message.
 
-Verify there are no broken transitions.
+IMPORTANT:
 
-Verify no screen displays mock/static financial values.
+This feature must remain completely FREE.
 
-All financial values must originate from real application state.
+DO NOT implement:
+
+- WhatsApp Business API
+- Meta Cloud API
+- paid messaging services
+- backend message delivery
+- automatic WhatsApp sending
+- scheduled WhatsApp messages
+- WhatsApp authentication
+- third-party paid services
+
+Use the device's WhatsApp application through a pre-filled message/deep link.
+
+The owner must always review and manually send the message.
 
 ==================================================
-PART 2 — AUTHENTICATION
+1. DUE DETAILS ACTION
 ==================================================
 
-Audit:
+Add a primary/secondary action to Due Details:
 
-Sign up
-Login
-Logout
-Session persistence
-Invalid credentials
-Empty fields
-Validation
-Loading states
-Permission errors
-Network errors
+"Remind Customer"
 
-Verify:
+Only show the action when:
 
-Unauthenticated user cannot access protected business data.
+- Due is active
+- customer exists
+- customer has a usable phone number
+- remaining amount > 0
 
-After logout:
+For PAID dues:
 
-Customer state
-Due state
-Payment state
-Recurring schedule state
+Do not show "Remind Customer".
 
-must not leak into another authenticated session.
+For CANCELLED dues:
 
-Test:
-
-User A login
-→ data visible
-
-Logout
-
-User B login
-→ only User B data visible
+Do not show "Remind Customer".
 
 ==================================================
-PART 3 — MULTI-TENANT SECURITY
+2. MESSAGE TYPE
 ==================================================
 
-This is CRITICAL.
+Automatically determine the default message based on Due status/date.
 
-Audit Firestore rules for:
+Possible states:
 
-users/{uid}/customers
-users/{uid}/dues
-users/{uid}/payments
-users/{uid}/recurring_due_schedules
+UPCOMING
+DUE TODAY
+OVERDUE
+PARTIALLY PAID
 
-Verify:
+Do not send reminders for:
 
-User A:
-
-READ own data → ALLOW
-CREATE own data → ALLOW
-UPDATE own data → ALLOW
-DELETE own data → ALLOW
-
-User A:
-
-READ User B data → DENY
-CREATE under User B → DENY
-UPDATE User B → DENY
-DELETE User B → DENY
-
-Verify:
-
-ownerId cannot be changed.
-
-businessId cannot be changed.
-
-Unauthenticated requests are denied.
-
-Do not use recursive wildcards.
+PAID
+CANCELLED
 
 ==================================================
-PART 4 — DATA INTEGRITY
+3. MESSAGE GENERATOR
 ==================================================
 
-Audit relationships:
+Create a pure domain/service class.
 
-Customer
-Due
-Payment
-RecurringSchedule
+Example:
 
-Verify:
+PaymentMessageGenerator
 
-Every Due references a valid customer belonging to the same owner.
+It should receive:
 
-Every Payment references a valid Due belonging to the same owner.
+customerName
+amount
+dueDate
+remainingAmount
+status
+businessName if available
 
-Every Payment references the correct customer.
+and return a message string.
 
-Every generated Due references the correct recurring schedule.
-
-A user must not be able to create:
-
-User A Due
-→ User B Customer
-
-or:
-
-User A Payment
-→ User B Due
+Keep message generation independent of Flutter widgets.
 
 ==================================================
-PART 5 — PAYMENT INTEGRITY
+4. UPCOMING MESSAGE
 ==================================================
 
-Audit:
+Example:
 
-Full payment
-Partial payment
-Multiple payments
-Payment deletion
-Remaining balance
-Paid status
-Partially paid status
+"Hi Rahul, this is a friendly reminder that ₹1,500 is due on August 25. Please let me know once the payment is completed. Thank you."
 
-Test:
+Use the actual:
 
-Due = ₹5,000
+customer name
+amount
+date
 
-Payment = ₹2,000
+Do not hardcode Rahul or ₹1,500.
 
+==================================================
+5. DUE TODAY MESSAGE
+==================================================
+
+Example:
+
+"Hi Rahul, a quick reminder that ₹1,500 is due today. Please let me know once the payment is completed. Thank you."
+
+Use real data.
+
+==================================================
+6. OVERDUE MESSAGE
+==================================================
+
+Example:
+
+"Hi Rahul, just a reminder that ₹1,500 is currently overdue. Please make the payment when possible. Thank you."
+
+Use the actual remaining balance, NOT the original amount.
+
+Example:
+
+Original Due = ₹5,000
+Paid = ₹2,000
 Remaining = ₹3,000
 
-Payment = ₹3,000
+The overdue message must say:
 
-Remaining = ₹0
+₹3,000
 
-Status = PAID
+not:
 
-Attempt:
-
-Payment = ₹1
-
-after fully paid
-
-Must be rejected.
-
-Attempt:
-
-Payment > remaining
-
-Must be rejected.
-
-Attempt:
-
-Payment = 0
-
-Must be rejected.
-
-Attempt:
-
-Negative payment
-
-Must be rejected.
+₹5,000.
 
 ==================================================
-PART 6 — DUE STATUS
+7. PARTIAL PAYMENT MESSAGE
 ==================================================
 
-Verify centralized status calculation:
+If appropriate, allow:
 
-CANCELLED
-PAID
-PARTIALLY_PAID
-OVERDUE
-DUE
-UPCOMING
+"Hi Rahul, this is a reminder regarding your remaining balance of ₹3,000. Please complete the payment when possible. Thank you."
 
-Priority:
+Again:
 
-CANCELLED
-↓
-PAID
-↓
-PARTIALLY_PAID
-↓
-date-based status
-
-Test date boundaries carefully.
+Use remaining balance.
 
 ==================================================
-PART 7 — DASHBOARD FINANCIAL INTEGRITY
+8. MESSAGE PREVIEW
 ==================================================
 
-Verify:
+Do NOT immediately launch WhatsApp.
 
-To Collect Today
-Collected Today
-Remaining Today
-Overdue
-Upcoming
-Monthly Expected
-Monthly Collected
-Monthly Outstanding
-Collection Rate
-Collection Trend
+First show a preview bottom sheet/dialog.
 
-Use real test data.
+Display:
 
-Example:
+Customer
+Phone
+Amount
+Due date
+Generated message
 
-Today:
+Actions:
 
-Due A = ₹5,000
-Payment = ₹2,000
+[Edit Message]
 
-Yesterday:
+[Open WhatsApp]
 
-Due B = ₹4,000
-Payment = ₹1,000
-
-Tomorrow:
-
-Due C = ₹3,000
-
-Expected:
-
-To Collect Today = ₹3,000
-
-Collected Today = ₹2,000
-
-Overdue = ₹3,000
-
-Upcoming = ₹3,000
-
-Verify no double counting.
+[Cancel]
 
 ==================================================
-PART 8 — RECURRING DUE INTEGRITY
+9. EDIT MESSAGE
 ==================================================
 
-Audit:
+The owner must be able to modify the generated message.
 
-Monthly
-Quarterly
-Yearly
-Weekly
+Use a multiline text field.
 
-Verify:
+Validation:
 
-No duplicate occurrences.
+Message cannot be empty.
 
-Occurrence IDs remain deterministic.
-
-Historical dues never change when schedule configuration changes.
-
-Example:
-
-August = ₹1,500
-
-Edit recurring schedule:
-
-₹1,500 → ₹2,000
-
-August remains:
-
-₹1,500
-
-Future occurrences:
-
-₹2,000
-
-Verify:
-
-Pause
-Resume
-Stop
-
-behave correctly.
-
-Verify maximum catch-up limit.
+Do not restrict normal punctuation.
 
 ==================================================
-PART 9 — REMINDER INTEGRITY
+10. OPEN WHATSAPP
 ==================================================
 
-Audit:
+Use the existing URL launcher infrastructure if appropriate.
 
-Reminder creation
-Reminder editing
-Reminder cancellation
-Paid cancellation
-Cancelled Due cancellation
-Partial payment
-Notification tap
+Generate a WhatsApp-compatible URL with:
 
-Verify:
+customer phone number
+URL-encoded message
 
-Paid Due has no pending reminder.
+Preferred behavior:
 
-Cancelled Due has no pending reminder.
+Open WhatsApp with the message pre-filled.
 
-Editing Due date cancels old reminder and creates new reminder.
+The owner manually presses Send.
 
-Changing reminder option does the same.
-
-Do not leave stale notifications.
+Do NOT send automatically.
 
 ==================================================
-PART 10 — ANDROID NOTIFICATION AUDIT
+11. PHONE NUMBER NORMALIZATION
 ==================================================
 
-Inspect:
+Implement a small pure helper:
 
-AndroidManifest.xml
+PhoneNumberNormalizer
 
-Verify required permissions and receivers.
+The MVP is primarily for India.
 
-Verify:
+However, do not blindly modify numbers.
 
-POST_NOTIFICATIONS
+Handle common Indian formats such as:
 
-SCHEDULE_EXACT_ALARM / USE_EXACT_ALARM
+9876543210
++919876543210
+919876543210
 
-and other permissions are actually required by the implementation.
+Normalize appropriately for WhatsApp.
 
-Do not retain unnecessary permissions.
+If the number cannot safely be normalized:
 
-Verify notification channel configuration.
+show:
 
-Verify notification IDs are deterministic and stable.
+"Please check this customer's phone number."
 
-Verify notification tap routing.
+Do not create a broken WhatsApp link.
 
-==================================================
-PART 11 — OFFLINE AUDIT
-==================================================
-
-Verify the existing Firestore offline architecture.
-
-Test:
-
-Offline:
-
-Add Customer
-Add Due
-Record Payment
-Edit Due
-Cancel Due
-
-Verify immediate local state.
-
-Reconnect.
-
-Verify synchronization.
-
-Verify no duplicate records.
-
-Verify dashboard recalculates.
-
-Verify search/filter continue working.
-
-Do NOT introduce SQLite.
+Do not silently guess international country codes for arbitrary foreign numbers.
 
 ==================================================
-PART 12 — APP RESTART
+12. NO WHATSAPP INSTALLED
 ==================================================
 
-Test:
+If WhatsApp cannot be opened:
 
-Online:
+show:
 
-Create data.
+"WhatsApp isn't available on this device."
 
-Disconnect network.
+Offer:
 
-Close application.
+[Copy Message]
 
-Reopen.
+[Close]
 
-Verify cached data is available.
-
-Verify application does not crash.
-
-Reconnect.
-
-Verify synchronization.
+Copying the message must work even without WhatsApp.
 
 ==================================================
-PART 13 — DATA LEAK AUDIT
+13. COPY MESSAGE
 ==================================================
 
-Search the codebase for:
+Add:
 
-hardcoded customer names
-hardcoded amounts
-fake payment data
-placeholder financial metrics
-mock dashboards
-sample data accidentally included in production state
-test data loaded automatically
+"Copy Message"
 
-Remove accidental production mock data.
+Use Flutter clipboard functionality.
 
-UI placeholders are acceptable only where they are clearly empty states.
+After copying:
+
+"Message copied"
+
+Use a SnackBar or equivalent feedback.
 
 ==================================================
-PART 14 — ERROR HANDLING
+14. CUSTOMER DETAILS
 ==================================================
 
-Audit every major user action.
+Add a convenient action:
 
-Errors must distinguish:
+"Remind"
 
-Validation
-Authentication
-Authorization
-Network
-Firestore
-Notification
+on Customer Details only when the customer has an active unpaid Due.
 
-Avoid:
+If multiple active dues exist:
 
-"Something went wrong."
+DO NOT automatically choose one.
 
-when a more useful message is possible.
+Instead show:
 
-Verify loading states prevent duplicate submission.
+"Choose a Due"
 
-==================================================
-PART 15 — DOUBLE SUBMISSION
-==================================================
+and list:
 
-Test rapidly tapping:
-
-Add Customer
-Save Due
-Record Payment
-Create Recurring Schedule
-
-Verify duplicate records cannot be created.
-
-==================================================
-PART 16 — DELETE SAFETY
-==================================================
-
-Audit deletion.
-
-Customer deletion must not destroy financial history accidentally.
-
-Due deletion/cancellation must not corrupt payment calculations.
-
-Payment deletion must recalculate:
-
-Paid
-Remaining
+Due amount
+Remaining amount
+Due date
 Status
+
+The owner chooses which Due to remind about.
+
+==================================================
+15. DASHBOARD INTEGRATION
+==================================================
+
+In the Dashboard:
+
+For:
+
+Needs Attention
+Due Today
+Overdue
+
+allow navigation to the relevant Due.
+
+Do not introduce WhatsApp buttons everywhere.
+
+Keep the UI clean.
+
+The main WhatsApp action should remain inside Due Details.
+
+==================================================
+16. PAYMENT RECEIVED MESSAGE
+==================================================
+
+After recording a payment successfully, optionally offer:
+
+"Send Payment Update"
+
+Generate:
+
+"Hi Rahul, we received your payment of ₹500. Your remaining balance is ₹1,000. Thank you."
+
+For fully paid:
+
+"Hi Rahul, we received your payment of ₹1,000. Your balance is now fully settled. Thank you."
+
+IMPORTANT:
+
+Do not automatically send.
+
+Show preview first.
+
+==================================================
+17. NO DATABASE REQUIRED
+==================================================
+
+Do NOT create a WhatsApp database collection.
+
+Do NOT store generated messages in Firestore.
+
+Messages are generated dynamically.
+
+The user may edit a message before sending.
+
+No additional backend required.
+
+==================================================
+18. PRIVACY
+==================================================
+
+Do not log:
+
+customer phone numbers
+message contents
+payment information
+
+in debug logs.
+
+Do not expose customer phone numbers unnecessarily.
+
+==================================================
+19. UI DESIGN
+==================================================
+
+Follow the existing Google Stitch design system.
+
+Use existing:
+
+colors
+typography
+buttons
+bottom sheets
+dialogs
+spacing
+icons
+theme
+
+Do NOT redesign DueIt.
+
+The WhatsApp action should feel like a native part of the existing application.
+
+==================================================
+20. ARCHITECTURE
+==================================================
+
+Suggested structure:
+
+features/communication/
+
+payment_message_generator.dart
+phone_number_normalizer.dart
+whatsapp_service.dart
+
+Use existing repository/controller patterns where appropriate.
+
+Keep pure logic testable.
+
+==================================================
+21. TESTS
+==================================================
+
+Add focused unit tests for:
+
+1. Upcoming message generation
+2. Due-today message generation
+3. Overdue message generation
+4. Partial payment message
+5. Fully paid message
+6. Remaining amount calculation in messages
+7. Phone number normalization
+8. Invalid phone number
+9. Message URL encoding
+10. Empty message validation
+
+Add widget tests for:
+
+1. Remind Customer button
+2. Message preview
+3. Edit message
+4. Copy message
+5. Missing phone number
+6. Multiple active dues selection
+
+Do NOT test actual WhatsApp delivery in automated tests.
+
+Clearly distinguish:
+
+message generation tested
+URL generation tested
+physical WhatsApp launch requires device testing
+
+==================================================
+22. SECURITY
+==================================================
+
+Do not weaken Firestore rules.
+
+Do not expose customer data through new endpoints.
+
+Do not create backend APIs.
+
+Do not add API keys.
+
+==================================================
+23. REGRESSION TEST
+==================================================
+
+Existing features must continue working:
+
+Customers
+Dues
+Payments
+Recurring Dues
+Reminders
 Dashboard
-
-Recurring schedule deletion must not delete historical Due records.
-
-==================================================
-PART 17 — SEARCH AND FILTER
-==================================================
-
-Verify:
-
-Customer search
-Due search
-Today filter
-Upcoming filter
-Overdue filter
-Paid filter
-
-Work with:
-
-Empty data
-Large data
-Partial search
-Case differences
-Whitespace
-Special characters
+Offline mode
 
 ==================================================
-PART 18 — UI/UX AUDIT
+24. QUALITY GATE
 ==================================================
-
-Compare the running application against the original Google Stitch design.
-
-Audit:
-
-Colors
-Typography
-Spacing
-Cards
-Buttons
-Bottom navigation
-Top bars
-Empty states
-Loading states
-Error states
-Dialogs
-Bottom sheets
-Form validation
-
-Do not redesign the application.
-
-Only fix clear regressions.
-
-==================================================
-PART 19 — ACCESSIBILITY
-==================================================
-
-Audit:
-
-Text readability
-Touch target sizes
-Contrast
-Semantic labels
-Keyboard behavior
-Form field focus
-Screen reader labels where appropriate
-
-Do not sacrifice the Stitch design unnecessarily.
-
-==================================================
-PART 20 — PERFORMANCE
-==================================================
-
-Look for:
-
-N+1 Firestore queries
-unnecessary rebuilds
-large widget rebuilds
-duplicate streams
-duplicate listeners
-memory leaks
-unclosed controllers
-unclosed subscriptions
-
-Verify:
-
-Dues screen
-Customers screen
-Dashboard
-
-do not create duplicate subscriptions when repeatedly opened.
-
-==================================================
-PART 21 — FIRESTORE COST REVIEW
-==================================================
-
-Review:
-
-watchCustomers
-watchDues
-watchPayments
-watchRecurringSchedules
-
-Verify no accidental listeners are created repeatedly.
-
-Verify listeners are disposed when no longer required.
-
-Document expected Firestore read behavior for a typical small business.
-
-Do not optimize prematurely.
-
-==================================================
-PART 22 — SECURITY CODE AUDIT
-==================================================
-
-Search for:
-
-hardcoded Firebase credentials
-API secrets
-private keys
-service-account JSON
-passwords
-tokens
-secret API keys
-
-No secrets should be committed into source code.
-
-Firebase client configuration values that are intentionally public identifiers are not equivalent to private secrets.
-
-Do not expose actual secrets in the final report.
-
-==================================================
-PART 23 — DEPENDENCY AUDIT
-==================================================
-
-Inspect pubspec.yaml.
-
-Identify:
-
-unused dependencies
-duplicate functionality
-obviously outdated dependencies
-unnecessary packages
-
-Do NOT perform a mass dependency upgrade.
-
-Only recommend upgrades that have a clear security or correctness reason.
-
-Do not upgrade flutter_local_notifications during this audit unless a concrete issue is discovered.
-
-==================================================
-PART 24 — TEST EXPANSION
-==================================================
-
-Add tests only for genuine uncovered risks discovered during the audit.
-
-Do not inflate the test count artificially.
 
 Run:
 
 dart format .
+
 flutter analyze
+
 flutter test
+
 flutter build apk --debug
 
-==================================================
-PART 25 — PHYSICAL DEVICE
-==================================================
+Requirements:
 
-If an Android device is available:
+flutter analyze = 0 issues
 
-Install the debug APK.
+All tests pass
 
-Test at minimum:
-
-1. Login
-2. Add customer
-3. Add due
-4. Schedule reminder
-5. Receive reminder
-6. Tap notification
-7. Partial payment
-8. Full payment
-9. Recurring due
-10. Offline create
-11. Reconnect
-12. App restart
-
-If no device is available:
-
-DO NOT claim physical verification.
-
-Clearly report:
-
-"Physical-device verification not performed."
+APK builds successfully
 
 ==================================================
-FINAL REPORT
+25. FINAL REPORT
 ==================================================
 
-Provide a production audit report with:
+Report:
 
-1. End-to-end flow result
-2. Authentication result
-3. Firestore security result
-4. Data integrity result
-5. Payment integrity result
-6. Due status result
-7. Dashboard result
-8. Recurring result
-9. Reminder result
-10. Android notification result
-11. Offline result
-12. Restart result
-13. Data leak result
-14. Error handling result
-15. Double-submission result
-16. Delete safety result
-17. Search/filter result
-18. UI/UX result
-19. Accessibility result
-20. Performance result
-21. Firestore cost observations
-22. Security code audit
-23. Dependency audit
-24. New tests added
-25. Total tests
-26. flutter analyze
-27. APK build
-28. Physical-device verification
-29. Critical issues
-30. Recommended fixes
+1. Message generator
+2. Message types
+3. Phone normalization
+4. WhatsApp integration
+5. Preview UI
+6. Copy fallback
+7. Customer Details integration
+8. Payment update message
+9. Dashboard integration
+10. Tests added
+11. Total tests
+12. flutter analyze
+13. APK build
+14. Physical WhatsApp testing status
+15. Known limitations
 
 IMPORTANT:
 
-Classify every discovered issue as:
+Do not claim WhatsApp was physically tested unless an Android device with WhatsApp was actually used.
 
-CRITICAL
-HIGH
-MEDIUM
-LOW
-INFORMATIONAL
-
-Do NOT silently fix risky architectural/security issues without reporting them.
-
-Do not start STEP 13.
-
-STOP after the audit.
+STOP after STEP 13.

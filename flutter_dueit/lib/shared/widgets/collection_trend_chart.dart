@@ -24,12 +24,21 @@ class CollectionTrendChart extends StatelessWidget {
       (maxVal, point) => max(maxVal, point.amount),
     );
 
-    return Card(
-      color: AppColors.surfaceContainerLowest,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(24),
-        side: const BorderSide(color: AppColors.surfaceVariant, width: 1),
+        border: Border.all(
+          color: AppColors.surfaceVariant.withValues(alpha: 0.8),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -43,19 +52,25 @@ class CollectionTrendChart extends StatelessWidget {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(9),
                       decoration: BoxDecoration(
-                        color:
-                            AppColors.primaryContainer.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(10),
+                        gradient: LinearGradient(
+                          colors: [
+                            AppColors.primaryContainer.withValues(alpha: 0.25),
+                            AppColors.primary.withValues(alpha: 0.15),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(
-                        Icons.insights,
-                        size: 18,
+                        Icons.insights_rounded,
+                        size: 20,
                         color: AppColors.primary,
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 12),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -63,23 +78,37 @@ class CollectionTrendChart extends StatelessWidget {
                           'Collection Trend',
                           style: AppTypography.titleMedium.copyWith(
                             fontWeight: FontWeight.w700,
+                            letterSpacing: -0.2,
                           ),
                         ),
                         Text(
                           'Daily cash inflow this month',
-                          style: AppTypography.bodySmall.copyWith(
+                          style: AppTypography.labelSmall.copyWith(
                             color: AppColors.onSurfaceVariant,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],
                     ),
                   ],
                 ),
-                Text(
-                  CurrencyFormatter.format(totalCollectedMonth),
-                  style: AppTypography.titleMedium.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.primary,
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: hasCollections
+                        ? AppColors.primaryFixedDim.withValues(alpha: 0.25)
+                        : AppColors.surfaceContainerHigh,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    CurrencyFormatter.format(totalCollectedMonth),
+                    style: AppTypography.labelLarge.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: hasCollections
+                          ? AppColors.primary
+                          : AppColors.onSurfaceVariant,
+                    ),
                   ),
                 ),
               ],
@@ -92,13 +121,13 @@ class CollectionTrendChart extends StatelessWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 28),
                 decoration: BoxDecoration(
-                  color: AppColors.surfaceContainerHigh.withValues(alpha: 0.3),
+                  color: AppColors.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Column(
                   children: [
                     Icon(
-                      Icons.bar_chart,
+                      Icons.bar_chart_rounded,
                       size: 32,
                       color: AppColors.onSurfaceVariant.withValues(alpha: 0.5),
                     ),
@@ -140,8 +169,18 @@ class CollectionTrendChart extends StatelessWidget {
                                     height: max(
                                         4.0, ratio * 96), // min 4px bar height
                                     decoration: BoxDecoration(
+                                      gradient: hasValue
+                                          ? const LinearGradient(
+                                              colors: [
+                                                Color(0xFF00A896),
+                                                AppColors.primary,
+                                              ],
+                                              begin: Alignment.topCenter,
+                                              end: Alignment.bottomCenter,
+                                            )
+                                          : null,
                                       color: hasValue
-                                          ? AppColors.primary
+                                          ? null
                                           : AppColors.surfaceContainerHigh,
                                       borderRadius: BorderRadius.circular(4),
                                     ),
@@ -159,6 +198,7 @@ class CollectionTrendChart extends StatelessWidget {
                                       style: AppTypography.labelSmall.copyWith(
                                         fontSize: 9,
                                         color: AppColors.onSurfaceVariant,
+                                        fontWeight: FontWeight.w600,
                                       ),
                                     )
                                   else
